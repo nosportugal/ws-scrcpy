@@ -45,4 +45,6 @@ export interface Configuration {
     runGoogTracker?: boolean;
     announceGoogTracker?: boolean;
     remoteHostList?: HostsItem[];
+    adbHost?: string;
+    adbPort?: number;
 }

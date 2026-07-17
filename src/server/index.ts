@@ -24,6 +24,16 @@ const config = Config.getInstance();
 
 /// #if INCLUDE_GOOG
 async function loadGoogModules() {
+    const { AdbExtended } = await import('./goog-device/adb');
+    const adbOptions: { host?: string; port?: number } = {};
+    if (config.adbHost) {
+        adbOptions.host = config.adbHost;
+    }
+    if (config.adbPort) {
+        adbOptions.port = config.adbPort;
+    }
+    AdbExtended.setDefaultOptions(adbOptions);
+
     const { ControlCenter } = await import('./goog-device/services/ControlCenter');
     const { DeviceTracker } = await import('./goog-device/mw/DeviceTracker');
     const { WebsocketProxyOverAdb } = await import('./goog-device/mw/WebsocketProxyOverAdb');

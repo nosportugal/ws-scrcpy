@@ -153,4 +153,12 @@ export class Config {
     public get servers(): ServerItem[] {
         return this.fullConfig.server;
     }
+
+    public get adbHost(): string | undefined {
+        return this.fullConfig.adbHost;
+    }
+
+    public get adbPort(): number | undefined {
+        return this.fullConfig.adbPort;
+    }
 }
