@@ -172,6 +172,29 @@ body.list #device_list_menu {
     padding: 0 .5em;
 }
 
+#devices .device-list .session-state {
+    align-items: center;
+    border-left: 1px solid var(--device-border-color);
+    font-size: 85%;
+    padding: 0 .6em;
+    text-transform: uppercase;
+}
+
+#devices .device-list .session-state.busy {
+    color: #b93a2f;
+    font-weight: 700;
+}
+
+#devices .device-list .session-state.idle {
+    color: #1f7a3d;
+    font-weight: 700;
+}
+
+#devices .device-list .session-state.offline {
+    color: var(--text-color-light);
+    text-transform: none;
+}
+
 #devices .device-list div.desc-block button > span,
 #devices .device-list div.desc-block button > svg {
     vertical-align: middle;

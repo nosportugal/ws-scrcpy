@@ -47,4 +47,5 @@ export interface Configuration {
     remoteHostList?: HostsItem[];
     adbHost?: string;
     adbPort?: number;
+    adbListenAllInterfaces?: boolean;
 }

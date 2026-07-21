@@ -24,6 +24,7 @@ export interface DeviceEvents {
 export class Device extends TypedEmitter<DeviceEvents> {
     private static readonly INITIAL_UPDATE_TIMEOUT = 1500;
     private static readonly MAX_UPDATES_COUNT = 7;
+    private static readonly ADB_BUSY_PROCESS_NAMES = ['uiautomator', 'uiautomator2', 'atx-agent', 'minicap', 'minitouch', 'frida-server'];
     private connected = true;
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
@@ -45,6 +46,9 @@ export class Device extends TypedEmitter<DeviceEvents> {
             state,
             interfaces: [],
             pid: -1,
+            wsBusy: false,
+            adbBusy: false,
+            busyReason: 'none',
             'wifi.interface': '',
             'ro.build.version.release': '',
             'ro.build.version.sdk': '',
@@ -330,6 +334,13 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const netIntPromise = this.updateInterfaces().then((interfaces) => {
                 return !!interfaces.length;
             });
+            const adbBusyPromise = this.detectAdbBusy().then((isBusy) => {
+                if (this.descriptor.adbBusy !== isBusy) {
+                    this.descriptor.adbBusy = isBusy;
+                    this.emitUpdate();
+                }
+                return true;
+            });
             let pidPromise: Promise<number | undefined>;
             if (this.spawnServer) {
                 pidPromise = this.startServer();
@@ -339,7 +350,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const serverPromise = pidPromise.then(() => {
                 return !(this.descriptor.pid === -1 && this.spawnServer);
             });
-            Promise.all([propsPromise, netIntPromise, serverPromise])
+            Promise.all([propsPromise, netIntPromise, serverPromise, adbBusyPromise])
                 .then((results) => {
                     this.updateTimeoutId = undefined;
                     const failedCount = results.filter((result) => !result).length;
@@ -461,5 +472,22 @@ export class Device extends TypedEmitter<DeviceEvents> {
             console.error(this.TAG, `Error: ${error.message}`);
             throw error;
         }
+    }
+
+    private async detectAdbBusy(): Promise<boolean> {
+        if (!this.connected) {
+            return false;
+        }
+        for (const processName of Device.ADB_BUSY_PROCESS_NAMES) {
+            try {
+                const pids = await this.getPidOf(processName);
+                if (Array.isArray(pids) && pids.length > 0) {
+                    return true;
+                }
+            } catch {
+                // Best effort check; ignore per-process failures.
+            }
+        }
+        return false;
     }
 }

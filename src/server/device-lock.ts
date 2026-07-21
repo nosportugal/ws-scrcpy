@@ -4,6 +4,7 @@ export class DeviceLock {
     ws: any;
     lastActive: number;
   }> = new Map();
+  private listeners: Set<() => void> = new Set();
 
   private timeoutMs: number;
   public onUpdate: (() => void) | null = null;
@@ -22,7 +23,7 @@ export class DeviceLock {
     }
 
     this.locks.set(deviceId, { sessionId, ws, lastActive: Date.now() });
-    this.onUpdate?.();
+    this.notifyUpdate();
     return true;
   }
 
@@ -39,7 +40,7 @@ export class DeviceLock {
 
     if (lock.sessionId === sessionId) {
       this.locks.delete(deviceId);
-      this.onUpdate?.();
+      this.notifyUpdate();
     }
   }
 
@@ -53,7 +54,7 @@ export class DeviceLock {
       if (expired || wsDead) {
         try { lock.ws.close(); } catch {}
         this.locks.delete(deviceId);
-        this.onUpdate?.();
+        this.notifyUpdate();
       }
     }
   }
@@ -64,6 +65,32 @@ export class DeviceLock {
       sessionId: lock.sessionId,
       lastActive: lock.lastActive
     }));
+  }
+
+  isLocked(deviceId: string): boolean {
+    const lock = this.locks.get(deviceId);
+    if (!lock) {
+      return false;
+    }
+    return lock.ws?.readyState !== 3;
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyUpdate(): void {
+    this.onUpdate?.();
+    for (const listener of this.listeners.values()) {
+      try {
+        listener();
+      } catch {
+        // Ignore listener errors to avoid breaking lock updates.
+      }
+    }
   }
 }
 

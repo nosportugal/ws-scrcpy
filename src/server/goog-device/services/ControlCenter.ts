@@ -11,6 +11,7 @@ import { ControlCenterCommand } from '../../../common/ControlCenterCommand';
 import * as os from 'os';
 import * as crypto from 'crypto';
 import { DeviceState } from '../../../common/DeviceState';
+import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> implements Service {
     private static readonly defaultWaitAfterError = 1000;
@@ -24,11 +25,13 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     private deviceMap: Map<string, Device> = new Map();
     private descriptors: Map<string, GoogDeviceDescriptor> = new Map();
     private readonly id: string;
+    private readonly unsubscribeLockUpdates: () => void;
 
     protected constructor() {
         super();
         const idString = `goog|${os.hostname()}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
+        this.unsubscribeLockUpdates = DeviceLock.subscribe(this.onLockUpdate);
     }
 
     public static getInstance(): ControlCenter {
@@ -78,8 +81,35 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
 
     private onDeviceUpdate = (device: Device): void => {
         const { udid, descriptor } = device;
+        this.applyBusyState(udid, descriptor);
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
+    };
+
+    private applyBusyState(udid: string, descriptor: GoogDeviceDescriptor): void {
+        const wsBusy = DeviceLock.isLocked(udid) || descriptor.pid !== -1;
+        const adbBusy = descriptor.adbBusy;
+        descriptor.wsBusy = wsBusy;
+        if (wsBusy && adbBusy) {
+            descriptor.busyReason = 'ws+adb';
+        } else if (wsBusy) {
+            descriptor.busyReason = 'ws';
+        } else if (adbBusy) {
+            descriptor.busyReason = 'adb';
+        } else {
+            descriptor.busyReason = 'none';
+        }
+    }
+
+    private onLockUpdate = (): void => {
+        this.descriptors.forEach((descriptor, udid) => {
+            const prevReason = descriptor.busyReason;
+            const prevWsBusy = descriptor.wsBusy;
+            this.applyBusyState(udid, descriptor);
+            if (prevReason !== descriptor.busyReason || prevWsBusy !== descriptor.wsBusy) {
+                this.emit('device', descriptor);
+            }
+        });
     };
 
     private handleConnected(udid: string, state: string): void {
@@ -152,6 +182,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     }
 
     public release(): void {
+        this.unsubscribeLockUpdates();
         this.stopTracker();
     }
 

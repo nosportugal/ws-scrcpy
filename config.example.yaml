@@ -11,6 +11,8 @@ runApplTracker: false;
 # adbHost: 192.168.1.100
 ## Set adbPort to use a non-default ADB server port
 # adbPort: 5037
+## Start local ADB daemon listening on all network interfaces at server startup (default: true)
+# adbListenAllInterfaces: true
 
 # HTTP[s] servers configuration
 server:

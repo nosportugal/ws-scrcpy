@@ -39,6 +39,9 @@ export class Config {
             announceApplTracker,
             server,
             remoteHostList: [],
+            adbHost: '127.0.0.1',
+            adbPort: 5037,
+            adbListenAllInterfaces: true,
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
@@ -160,5 +163,9 @@ export class Config {
 
     public get adbPort(): number | undefined {
         return this.fullConfig.adbPort;
+    }
+
+    public get adbListenAllInterfaces(): boolean {
+        return this.fullConfig.adbListenAllInterfaces;
     }
 }

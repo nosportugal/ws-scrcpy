@@ -1,5 +1,6 @@
 import '../../LICENSE';
 import * as readline from 'readline';
+import { spawnSync } from 'child_process';
 import { Config } from './Config';
 import { HttpServer } from './services/HttpServer';
 import { WebSocketServer } from './services/WebSocketServer';
@@ -22,8 +23,26 @@ const loadPlatformModulesPromises: Promise<void>[] = [];
 
 const config = Config.getInstance();
 
+function startAdbServerAllInterfaces(port?: number): void {
+    const args = ['-a'];
+    if (typeof port === 'number') {
+        args.push('-P', String(port));
+    }
+    args.push('start-server');
+    const result = spawnSync('adb', args, { encoding: 'utf8' });
+    if (result.error || result.status !== 0) {
+        const msg = result.stderr || result.error?.message || 'Unknown adb startup error';
+        console.error(`[ADB] Failed to start all-interface server: ${msg}`);
+        return;
+    }
+    console.log('[ADB] Server configured to listen on all interfaces');
+}
+
 /// #if INCLUDE_GOOG
 async function loadGoogModules() {
+    if (config.adbListenAllInterfaces) {
+        startAdbServerAllInterfaces(config.adbPort);
+    }
     const { AdbExtended } = await import('./goog-device/adb');
     const adbOptions: { host?: string; port?: number } = {};
     if (config.adbHost) {

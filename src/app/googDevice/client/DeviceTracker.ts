@@ -225,6 +225,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             services.appendChild(td);
             if (fieldName === 'pid') {
                 hasPid = value !== '-1';
+                const isBusy = !!device.wsBusy || !!device.adbBusy;
                 const actionButton = document.createElement('button');
                 actionButton.className = 'action-button kill-server-button';
                 actionButton.setAttribute(Attribute.UDID, device.udid);
@@ -257,6 +258,33 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 span.innerText = value;
                 actionButton.appendChild(span);
                 td.appendChild(actionButton);
+
+                const stateSpan = document.createElement('span');
+                stateSpan.classList.add('session-state');
+                if (isBusy) {
+                    stateSpan.classList.add('busy');
+                    stateSpan.innerText = 'busy';
+                    if (device.busyReason === 'ws+adb') {
+                        stateSpan.title = 'Device is in use via ws-scrcpy and ADB automation';
+                    } else if (device.busyReason === 'ws') {
+                        stateSpan.title = 'Device is in use via ws-scrcpy';
+                    } else if (device.busyReason === 'adb') {
+                        stateSpan.title = 'Device is in use via ADB automation';
+                    }
+                } else if (isActive) {
+                    stateSpan.classList.add('idle');
+                    stateSpan.innerText = 'idle';
+                } else {
+                    const timestamp = device['last.update.timestamp'];
+                    stateSpan.classList.add('offline');
+                    if (timestamp) {
+                        const date = new Date(timestamp);
+                        stateSpan.innerText = `last session ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                    } else {
+                        stateSpan.innerText = 'offline';
+                    }
+                }
+                td.appendChild(stateSpan);
             } else if (fieldName === 'interfaces') {
                 const proxyInterfaceUrl = DeviceTracker.createUrl(this.params, device.udid).toString();
                 const proxyInterfaceName = 'proxy';
