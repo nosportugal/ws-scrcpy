@@ -87,7 +87,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     };
 
     private applyBusyState(udid: string, descriptor: GoogDeviceDescriptor): void {
-        const wsBusy = DeviceLock.isLocked(udid) || descriptor.pid !== -1;
+        const wsBusy = DeviceLock.isLocked(udid) || descriptor.scrcpyConnectionCount > 0;
         const adbBusy = descriptor.adbBusy;
         descriptor.wsBusy = wsBusy;
         if (wsBusy && adbBusy) {

@@ -265,9 +265,9 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     stateSpan.classList.add('busy');
                     stateSpan.innerText = 'busy';
                     if (device.busyReason === 'ws+adb') {
-                        stateSpan.title = 'Device is in use via ws-scrcpy and ADB automation';
+                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
                     } else if (device.busyReason === 'ws') {
-                        stateSpan.title = 'Device is in use via ws-scrcpy';
+                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active)`;
                     } else if (device.busyReason === 'adb') {
                         stateSpan.title = 'Device is in use via ADB automation';
                     }

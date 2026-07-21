@@ -7,6 +7,7 @@ import { TypedEmitter } from '../../common/TypedEmitter';
 import GoogDeviceDescriptor from '../../types/GoogDeviceDescriptor';
 import { ScrcpyServer } from './ScrcpyServer';
 import { Properties } from './Properties';
+import { SERVER_PORT } from '../../common/Constants';
 import Timeout = NodeJS.Timeout;
 
 enum PID_DETECTION {
@@ -46,6 +47,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             state,
             interfaces: [],
             pid: -1,
+            scrcpyConnectionCount: 0,
             wsBusy: false,
             adbBusy: false,
             busyReason: 'none',
@@ -341,6 +343,13 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 }
                 return true;
             });
+            const scrcpyConnectionsPromise = this.detectScrcpyConnections().then((count) => {
+                if (this.descriptor.scrcpyConnectionCount !== count) {
+                    this.descriptor.scrcpyConnectionCount = count;
+                    this.emitUpdate();
+                }
+                return true;
+            });
             let pidPromise: Promise<number | undefined>;
             if (this.spawnServer) {
                 pidPromise = this.startServer();
@@ -350,7 +359,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const serverPromise = pidPromise.then(() => {
                 return !(this.descriptor.pid === -1 && this.spawnServer);
             });
-            Promise.all([propsPromise, netIntPromise, serverPromise, adbBusyPromise])
+            Promise.all([propsPromise, netIntPromise, serverPromise, adbBusyPromise, scrcpyConnectionsPromise])
                 .then((results) => {
                     this.updateTimeoutId = undefined;
                     const failedCount = results.filter((result) => !result).length;
@@ -489,5 +498,23 @@ export class Device extends TypedEmitter<DeviceEvents> {
             }
         }
         return false;
+    }
+
+    private async detectScrcpyConnections(): Promise<number> {
+        if (!this.connected) {
+            return 0;
+        }
+        const portHex = SERVER_PORT.toString(16).toUpperCase().padStart(4, '0');
+        const command = `cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i ':${portHex} ' | grep -c ' 01 ' || true`;
+        try {
+            const output = await this.runShellCommandAdbKit(command);
+            const count = parseInt(output.trim(), 10);
+            if (isNaN(count)) {
+                return 0;
+            }
+            return count;
+        } catch {
+            return 0;
+        }
     }
 }
