@@ -1,5 +1,8 @@
 import '../../LICENSE';
 import * as readline from 'readline';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { Config } from './Config';
 import { HttpServer } from './services/HttpServer';
@@ -24,6 +27,10 @@ const loadPlatformModulesPromises: Promise<void>[] = [];
 const config = Config.getInstance();
 
 function startAdbServerAllInterfaces(port?: number): void {
+    // Kill any existing daemon first — 'adb -a start-server' is a no-op if one
+    // is already running without the -a flag.
+    spawnSync('adb', ['kill-server'], { encoding: 'utf8' });
+
     const args = ['-a'];
     if (typeof port === 'number') {
         args.push('-P', String(port));
@@ -38,18 +45,38 @@ function startAdbServerAllInterfaces(port?: number): void {
     console.log('[ADB] Server configured to listen on all interfaces');
 }
 
+function installAdbAllInterfacesWrapper(): string {
+    const wrapperPath = path.join(os.tmpdir(), 'ws-scrcpy-adb-wrapper.sh');
+    const content = [
+        '#!/bin/sh',
+        '# ws-scrcpy wrapper: ensures adb start-server always uses -a (all interfaces)',
+        'for arg in "$@"; do',
+        '  if [ "$arg" = "start-server" ]; then',
+        '    exec adb -a "$@"',
+        '  fi',
+        'done',
+        'exec adb "$@"',
+        '',
+    ].join('\n');
+    fs.writeFileSync(wrapperPath, content, { mode: 0o755 });
+    return wrapperPath;
+}
+
 /// #if INCLUDE_GOOG
 async function loadGoogModules() {
     if (config.adbListenAllInterfaces) {
         startAdbServerAllInterfaces(config.adbPort);
     }
     const { AdbExtended } = await import('./goog-device/adb');
-    const adbOptions: { host?: string; port?: number } = {};
+    const adbOptions: { host?: string; port?: number; bin?: string } = {};
     if (config.adbHost) {
         adbOptions.host = config.adbHost;
     }
     if (config.adbPort) {
         adbOptions.port = config.adbPort;
+    }
+    if (config.adbListenAllInterfaces) {
+        adbOptions.bin = installAdbAllInterfacesWrapper();
     }
     AdbExtended.setDefaultOptions(adbOptions);
 
