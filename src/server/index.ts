@@ -27,9 +27,19 @@ const loadPlatformModulesPromises: Promise<void>[] = [];
 const config = Config.getInstance();
 
 function startAdbServerAllInterfaces(port?: number): void {
-    // Kill any existing daemon first — 'adb -a start-server' is a no-op if one
-    // is already running without the -a flag.
-    spawnSync('adb', ['kill-server'], { encoding: 'utf8' });
+    // If ADB is already listening on this port, keep it as-is.
+    // Replacing the daemon may switch runtime user/keys and break device visibility.
+    if (typeof port === 'number') {
+        const check = spawnSync('ss', ['-ltn'], { encoding: 'utf8' });
+        if (!check.error && check.status === 0) {
+            const hasPort = new RegExp(`:${port}\\b`);
+            const lines = check.stdout.split('\n');
+            if (lines.some((line) => line.includes('LISTEN') && hasPort.test(line))) {
+                console.log(`[ADB] Existing daemon detected on port ${port}; keeping current instance`);
+                return;
+            }
+        }
+    }
 
     const args = ['-a'];
     if (typeof port === 'number') {
