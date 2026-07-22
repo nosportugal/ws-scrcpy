@@ -45,40 +45,6 @@ function startAdbServerAllInterfaces(port?: number): void {
     console.log('[ADB] Server configured to listen on all interfaces');
 }
 
-function isAdbListeningAllInterfaces(port: number): boolean {
-    const result = spawnSync('ss', ['-ltn'], { encoding: 'utf8' });
-    if (result.error || result.status !== 0) {
-        const msg = result.stderr || result.error?.message || 'Unknown ss error';
-        console.error(`[ADB] Failed to inspect listening sockets: ${msg}`);
-        return false;
-    }
-
-    const lines = result.stdout.split('\n');
-    const hasPort = new RegExp(`:${port}\\b`);
-    const allIfaces = new RegExp(`(?:\\*:${port}\\b|0\\.0\\.0\\.0:${port}\\b|\\[::\\]:${port}\\b)`);
-
-    for (const line of lines) {
-        if (!line.includes('LISTEN')) {
-            continue;
-        }
-        if (!hasPort.test(line)) {
-            continue;
-        }
-        if (allIfaces.test(line)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function ensureAdbServerAllInterfaces(port: number): void {
-    if (!isAdbListeningAllInterfaces(port)) {
-        console.warn(`[ADB] Port ${port} is not exposed on all interfaces. Restarting daemon with -a`);
-        startAdbServerAllInterfaces(port);
-    }
-}
-
 function installAdbAllInterfacesWrapper(): string {
     const wrapperPath = path.join(os.tmpdir(), 'ws-scrcpy-adb-wrapper.sh');
     const content = [
@@ -100,12 +66,6 @@ function installAdbAllInterfacesWrapper(): string {
 async function loadGoogModules() {
     if (config.adbListenAllInterfaces) {
         startAdbServerAllInterfaces(config.adbPort);
-        const adbPort = typeof config.adbPort === 'number' ? config.adbPort : 5037;
-        ensureAdbServerAllInterfaces(adbPort);
-        const timer = setInterval(() => {
-            ensureAdbServerAllInterfaces(adbPort);
-        }, 30000);
-        timer.unref();
     }
     const { AdbExtended } = await import('./goog-device/adb');
     const adbOptions: { host?: string; port?: number; bin?: string } = {};

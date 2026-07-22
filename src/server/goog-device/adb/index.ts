@@ -19,7 +19,7 @@ export class AdbExtended extends Adb {
         const mergedOptions = { ...AdbExtended.defaultOptions, ...options };
         const opts: ClientOptions = {
             bin: mergedOptions.bin,
-            host: mergedOptions.host || process.env.ADB_HOST || '0.0.0.0',
+            host: mergedOptions.host || process.env.ADB_HOST || '127.0.0.1',
             port: mergedOptions.port || 0,
         };
         if (!opts.port) {
