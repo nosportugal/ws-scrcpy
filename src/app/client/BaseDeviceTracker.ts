@@ -86,7 +86,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     protected constructor(params: ParamsDeviceTracker, protected readonly directUrl: string) {
         super(params);
         this.elementId = `tracker_instance${++BaseDeviceTracker.instanceId}`;
-        this.trackerName = `Unavailable. Host: ${params.hostname}, type: ${params.type}`;
+        this.trackerName = `⏳ A ligar a ${params.hostname ?? location.hostname}…`;
         this.setBodyClass('list');
         this.setTitle();
     }
@@ -211,16 +211,36 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
     }
 
+    private static readonly PAGE_HEADER_ID = 'page-header';
+
     protected getOrCreateTableHolder(): HTMLElement {
         const id = BaseDeviceTracker.HOLDER_ELEMENT_ID;
         let devices = document.getElementById(id);
         if (!devices) {
+            BaseDeviceTracker.getOrCreatePageHeader();
             devices = document.createElement('div');
             devices.id = id;
             devices.className = 'table-wrapper';
             document.body.appendChild(devices);
         }
         return devices;
+    }
+
+    private static getOrCreatePageHeader(): void {
+        if (document.getElementById(BaseDeviceTracker.PAGE_HEADER_ID)) {
+            return;
+        }
+        const header = document.createElement('header');
+        header.id = BaseDeviceTracker.PAGE_HEADER_ID;
+        const logo = document.createElement('span');
+        logo.className = 'page-header-logo';
+        logo.textContent = '📱';
+        const title = document.createElement('span');
+        title.className = 'page-header-title';
+        title.textContent = 'Mobile Labs';
+        header.appendChild(logo);
+        header.appendChild(title);
+        document.body.prepend(header);
     }
 
     protected updateDescriptor(descriptor: DD, ccId?: string): void {

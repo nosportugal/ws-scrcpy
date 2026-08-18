@@ -5,6 +5,7 @@
     --device-list-hover-color: hsl(218, 67%, 95%);
     --device-card-radius: 8px;
     --device-card-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --page-header-height: 60px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -14,6 +15,54 @@
         --device-list-default-color: hsl(0, 0%, 14%);
         --device-list-hover-color: hsl(218, 17%, 18%);
         --device-card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+}
+
+#page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--page-header-height);
+    padding: 0 24px;
+    background: linear-gradient(135deg, hsl(220, 14%, 96%) 0%, hsl(218, 30%, 92%) 100%);
+    border-bottom: 1px solid hsl(220, 13%, 88%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    #page-header {
+        background: linear-gradient(135deg, hsl(220, 14%, 16%) 0%, hsl(218, 20%, 20%) 100%);
+        border-bottom-color: hsl(220, 13%, 28%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+}
+
+.page-header-logo {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.page-header-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, hsl(218, 85%, 43%), hsl(199, 80%, 40%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+@media (prefers-color-scheme: dark) {
+    .page-header-title {
+        background: linear-gradient(135deg, hsl(218, 63%, 70%), hsl(199, 63%, 65%));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 }
 
@@ -27,7 +76,7 @@ body.list {
 #devices {
     padding: 20px 0;
     width: 100%;
-    height: calc(100% - 40px);
+    height: calc(100% - var(--page-header-height) - 40px);
     overflow-y: auto;
 }
 
