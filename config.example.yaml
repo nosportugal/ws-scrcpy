@@ -6,12 +6,13 @@ runGoogTracker: false
 ## track iOS devices (default: true, if was INCLUDE_APPL enabled in build config)
 runApplTracker: false;
 
-# ADB server configuration (default: 127.0.0.1:5037)
-## Set adbHost to accept connections from a remote ADB server
+# ADB server configuration
+## Set adbHost to connect to a remote ADB server (default: uses ADB_HOST env var, or 127.0.0.1)
 # adbHost: 192.168.1.100
-## Set adbPort to use a non-default ADB server port
+## Set adbPort to use a non-default ADB server port (default: uses ADB_PORT env var, or 5037)
 # adbPort: 5037
-## Start local ADB daemon listening on all network interfaces at server startup (default: true)
+## Start local ADB daemon listening on all network interfaces at server startup (default: false)
+## Enable this to allow remote adb clients to connect to THIS machine's ADB server
 # adbListenAllInterfaces: true
 
 # HTTP[s] servers configuration
