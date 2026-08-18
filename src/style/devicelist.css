@@ -73,19 +73,7 @@
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, hsl(218, 85%, 43%), hsl(199, 80%, 40%));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@media (prefers-color-scheme: dark) {
-    .page-header-title {
-        background: linear-gradient(135deg, hsl(218, 63%, 70%), hsl(199, 63%, 65%));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+    color: currentColor;
 }
 
 .page-header-right-logo {
