@@ -10,9 +10,12 @@ const DEFAULT_PORT = 8000;
 const YAML_RE = /^.+\.(yaml|yml)$/i;
 const JSON_RE = /^.+\.(json|js)$/i;
 
+type FullConfiguration = Omit<Required<Configuration>, 'adbHost' | 'adbPort'> &
+    Pick<Configuration, 'adbHost' | 'adbPort'>;
+
 export class Config {
     private static instance?: Config;
-    private static initConfig(userConfig: Configuration = {}): Required<Configuration> {
+    private static initConfig(userConfig: Configuration = {}): FullConfiguration {
         let runGoogTracker = false;
         let announceGoogTracker = false;
         /// #if INCLUDE_GOOG
@@ -32,15 +35,15 @@ export class Config {
                 port: DEFAULT_PORT,
             },
         ];
-        const defaultConfig: Required<Configuration> = {
+        const defaultConfig: FullConfiguration = {
             runGoogTracker,
             runApplTracker,
             announceGoogTracker,
             announceApplTracker,
             server,
             remoteHostList: [],
-            adbHost: undefined as unknown as string,
-            adbPort: undefined as unknown as number,
+            adbHost: undefined,
+            adbPort: undefined,
             adbListenAllInterfaces: false,
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
@@ -110,7 +113,7 @@ export class Config {
         return fs.readFileSync(absolutePath).toString();
     }
 
-    constructor(private fullConfig: Required<Configuration>) {}
+    constructor(private fullConfig: FullConfiguration) {}
 
     public getHostList(): HostItem[] {
         if (!this.fullConfig.remoteHostList || !this.fullConfig.remoteHostList.length) {
