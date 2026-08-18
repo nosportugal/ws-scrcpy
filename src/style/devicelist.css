@@ -262,7 +262,6 @@ body.list #device_list_menu {
 
 #devices .tracker-name {
     padding: 12px 20px 4px;
-    font-size: larger;
     font-weight: bolder;
     letter-spacing: 0.02em;
     color: var(--text-color-light);

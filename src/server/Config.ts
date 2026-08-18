@@ -47,7 +47,6 @@ export class Config {
             adbListenAllInterfaces: true,
             adbServers: [
                 { host: '127.0.0.1', port: 5037 },
-                { host: '192.168.200.37', port: 5037 },
             ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
