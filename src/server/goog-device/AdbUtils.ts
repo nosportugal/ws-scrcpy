@@ -2,6 +2,7 @@ import * as portfinder from 'portfinder';
 import * as http from 'http';
 import * as net from 'net';
 import * as path from 'path';
+import { Duplex } from 'stream';
 import { ACTION } from '../../common/Action';
 import { AdbExtended } from './adb';
 import { DevtoolsInfo, RemoteBrowserInfo, RemoteTarget, VersionMetadata } from '../../types/RemoteDevtools';
@@ -189,7 +190,7 @@ export class AdbUtils {
             server.close();
             client
                 .openLocal(serial, remote)
-                .then((deviceSocket: net.Socket) => {
+                .then((deviceSocket: Duplex) => {
                     localSocket.pipe(deviceSocket);
                     deviceSocket.pipe(localSocket);
                     const cleanup = () => {

@@ -3,6 +3,8 @@
     --device-list-stripe-color: hsl(0, 0%, 96%);
     --device-list-default-color: hsl(0, 0%, 100%);
     --device-list-hover-color: hsl(218, 67%, 95%);
+    --device-card-radius: 8px;
+    --device-card-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -11,6 +13,7 @@
         --device-list-stripe-color: hsl(0, 0%, 16%);
         --device-list-default-color: hsl(0, 0%, 14%);
         --device-list-hover-color: hsl(218, 17%, 18%);
+        --device-card-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 }
 
@@ -59,7 +62,7 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.device:nth-child(2n){
-    background-color: var(--device-list-stripe-color);
+    background-color: var(--device-list-default-color);
 }
 
 #devices .device-header {
@@ -124,11 +127,17 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.device {
-    padding: 5px 20px 5px;
+    padding: 10px 20px;
+    margin: 6px 12px;
+    border: 1px solid var(--device-border-color);
+    border-radius: var(--device-card-radius);
+    box-shadow: var(--device-card-shadow);
+    background-color: var(--device-list-default-color);
 }
 
 #devices .device-list div.device:hover {
-    background-color: var(--device-list-hover-color)
+    background-color: var(--device-list-hover-color);
+    border-color: hsl(218, 67%, 75%);
 }
 
 #devices .device-list div.device select {
@@ -252,7 +261,11 @@ body.list #device_list_menu {
 }
 
 #devices .tracker-name {
-    padding: 5px 20px 5px;
+    padding: 12px 20px 4px;
     font-size: larger;
     font-weight: bolder;
+    letter-spacing: 0.02em;
+    color: var(--text-color-light);
+    text-transform: uppercase;
+    font-size: 0.75em;
 }
