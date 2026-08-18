@@ -15,10 +15,10 @@ import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> implements Service {
     private static readonly defaultWaitAfterError = 1000;
-    private static instance?: ControlCenter;
+    private static instances: ControlCenter[] = [];
 
     private initialized = false;
-    private client: AdbKitClient = AdbExtended.createClient();
+    private client: AdbKitClient;
     private tracker?: Tracker;
     private waitAfterError = 1000;
     private restartTimeoutId?: Timeout;
@@ -27,22 +27,33 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     private readonly id: string;
     private readonly unsubscribeLockUpdates: () => void;
 
-    protected constructor() {
+    protected constructor(private readonly adbHost: string = '127.0.0.1', private readonly adbPort: number = 5037) {
         super();
-        const idString = `goog|${os.hostname()}|${os.uptime()}`;
+        const idString = `goog|${os.hostname()}|${adbHost}:${adbPort}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
+        this.client = AdbExtended.createClient({ host: adbHost, port: adbPort });
         this.unsubscribeLockUpdates = DeviceLock.subscribe(this.onLockUpdate);
     }
 
     public static getInstance(): ControlCenter {
-        if (!this.instance) {
-            this.instance = new ControlCenter();
+        if (!this.instances.length) {
+            this.instances.push(new ControlCenter());
         }
-        return this.instance;
+        return this.instances[0];
+    }
+
+    public static getInstances(): ControlCenter[] {
+        return this.instances;
+    }
+
+    public static createInstance(host: string, port: number): ControlCenter {
+        const instance = new ControlCenter(host, port);
+        this.instances.push(instance);
+        return instance;
     }
 
     public static hasInstance(): boolean {
-        return !!ControlCenter.instance;
+        return this.instances.length > 0;
     }
 
     private restartTracker = (): void => {
@@ -159,6 +170,24 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         this.initialized = false;
     }
 
+    public static getAllDevices(): GoogDeviceDescriptor[] {
+        const all: GoogDeviceDescriptor[] = [];
+        for (const instance of ControlCenter.instances) {
+            all.push(...instance.getDevices());
+        }
+        return all;
+    }
+
+    public static findDeviceAcrossInstances(udid: string): Device | undefined {
+        for (const instance of ControlCenter.instances) {
+            const device = instance.getDevice(udid);
+            if (device) {
+                return device;
+            }
+        }
+        return undefined;
+    }
+
     public getDevices(): GoogDeviceDescriptor[] {
         return Array.from(this.descriptors.values());
     }
@@ -172,18 +201,25 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     }
 
     public getName(): string {
-        return `aDevice Tracker [${os.hostname()}]`;
+        return `aDevice Tracker [${os.hostname()} → ${this.adbHost}:${this.adbPort}]`;
     }
 
     public start(): Promise<void> {
-        return this.init().catch((e) => {
-            console.error(`Error: Failed to init "${this.getName()}". ${e.message}`);
-        });
+        // Start all instances when the first one is started via ServiceClass
+        const startPromises = ControlCenter.instances.map((instance) =>
+            instance.init().catch((e) => {
+                console.error(`Error: Failed to init "${instance.getName()}". ${e.message}`);
+            }),
+        );
+        return Promise.all(startPromises).then(() => undefined);
     }
 
     public release(): void {
-        this.unsubscribeLockUpdates();
-        this.stopTracker();
+        // Release all instances
+        for (const instance of ControlCenter.instances) {
+            instance.unsubscribeLockUpdates();
+            instance.stopTracker();
+        }
     }
 
     public async runCommand(command: ControlCenterCommand): Promise<void> {

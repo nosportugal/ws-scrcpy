@@ -1,7 +1,7 @@
 import * as process from 'process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Configuration, HostItem, ServerItem } from '../types/Configuration';
+import { AdbServerItem, Configuration, HostItem, ServerItem } from '../types/Configuration';
 import { EnvName } from './EnvName';
 import YAML from 'yaml';
 
@@ -42,9 +42,13 @@ export class Config {
             announceApplTracker,
             server,
             remoteHostList: [],
-            adbHost: '192.168.200.37',
-            adbPort: 5037,
+            adbHost: undefined,
+            adbPort: undefined,
             adbListenAllInterfaces: true,
+            adbServers: [
+                { host: '127.0.0.1', port: 5037 },
+                { host: '192.168.200.37', port: 5037 },
+            ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
@@ -170,5 +174,17 @@ export class Config {
 
     public get adbListenAllInterfaces(): boolean {
         return this.fullConfig.adbListenAllInterfaces;
+    }
+
+    public get adbServers(): AdbServerItem[] {
+        // If adbServers is explicitly configured, use it.
+        // Otherwise fall back to legacy adbHost/adbPort if set.
+        if (this.fullConfig.adbServers && this.fullConfig.adbServers.length) {
+            return this.fullConfig.adbServers;
+        }
+        if (this.fullConfig.adbHost) {
+            return [{ host: this.fullConfig.adbHost, port: this.fullConfig.adbPort || 5037 }];
+        }
+        return [{ host: '127.0.0.1', port: 5037 }];
     }
 }

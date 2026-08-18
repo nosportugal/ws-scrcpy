@@ -37,6 +37,11 @@ export interface ServerItem {
         | boolean;
 }
 
+export interface AdbServerItem {
+    host: string;
+    port?: number;
+}
+
 // The configuration file must contain a single object with this structure
 export interface Configuration {
     server?: ServerItem[];
@@ -48,4 +53,5 @@ export interface Configuration {
     adbHost?: string;
     adbPort?: number;
     adbListenAllInterfaces?: boolean;
+    adbServers?: AdbServerItem[];
 }

@@ -94,6 +94,13 @@ async function loadGoogModules() {
     const { DeviceTracker } = await import('./goog-device/mw/DeviceTracker');
     const { WebsocketProxyOverAdb } = await import('./goog-device/mw/WebsocketProxyOverAdb');
 
+    // Create one ControlCenter per configured ADB server
+    const adbServers = config.adbServers;
+    for (const adbServer of adbServers) {
+        ControlCenter.createInstance(adbServer.host, adbServer.port || 5037);
+        console.log(`[ADB] Registered ADB server: ${adbServer.host}:${adbServer.port || 5037}`);
+    }
+
     if (config.runLocalGoogTracker) {
         mw2List.push(DeviceTracker);
     }
