@@ -225,7 +225,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         if (this.adbName) {
             return `Android Devices [${this.adbName}]`;
         }
-        return `Android Devices [${os.hostname()} → ${this.adbHost}:${this.adbPort}]`;
+        return `Android Devices [${os.hostname()}]`;
     }
 
     public start(): Promise<void> {
