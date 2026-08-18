@@ -39,7 +39,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
     public readonly TAG: string;
     public readonly descriptor: GoogDeviceDescriptor;
 
-    constructor(public readonly udid: string, state: string) {
+    constructor(public readonly udid: string, state: string, adbHost?: string, adbPort?: number) {
         super();
         this.TAG = `[${udid}]`;
         this.descriptor = {
@@ -59,7 +59,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             'ro.product.cpu.abi': '',
             'last.update.timestamp': 0,
         };
-        this.client = AdbExtended.createClient();
+        this.client = AdbExtended.createClient({ host: adbHost, port: adbPort });
         this.setState(state);
     }
 

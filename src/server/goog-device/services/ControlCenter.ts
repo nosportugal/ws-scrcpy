@@ -128,7 +128,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         if (device) {
             device.setState(state);
         } else {
-            device = new Device(udid, state);
+            device = new Device(udid, state, this.adbHost, this.adbPort);
             device.on('update', this.onDeviceUpdate);
             this.deviceMap.set(udid, device);
         }
