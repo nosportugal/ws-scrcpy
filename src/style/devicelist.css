@@ -67,6 +67,9 @@
 }
 
 .page-header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.5px;
