@@ -42,7 +42,9 @@ export class DeviceTracker extends Mw {
                 }),
         );
         Promise.all(initPromises).then(() => {
-            this.buildAndSendMessage(ControlCenter.getAllDevices());
+            for (const cc of this.controlCenters) {
+                this.buildAndSendMessage(cc.getDevices(), cc);
+            }
         });
     }
 
@@ -65,12 +67,11 @@ export class DeviceTracker extends Mw {
         }
     };
 
-    private buildAndSendMessage = (list: GoogDeviceDescriptor[]): void => {
-        const cc = this.controlCenters[0];
+    private buildAndSendMessage = (list: GoogDeviceDescriptor[], cc: ControlCenter): void => {
         const data: DeviceTrackerEventList<GoogDeviceDescriptor> = {
             list,
-            id: cc?.getId() || '',
-            name: cc?.getName() || 'Unknown',
+            id: cc.getId(),
+            name: cc.getName(),
         };
         this.sendMessage({
             id: -1,
