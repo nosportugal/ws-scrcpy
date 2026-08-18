@@ -27,7 +27,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     private readonly id: string;
     private readonly unsubscribeLockUpdates: () => void;
 
-    protected constructor(private readonly adbHost: string = '127.0.0.1', private readonly adbPort: number = 5037) {
+    protected constructor(private readonly adbHost: string = '127.0.0.1', private readonly adbPort: number = 5037, private readonly adbName?: string) {
         super();
         const idString = `goog|${os.hostname()}|${adbHost}:${adbPort}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
@@ -46,8 +46,8 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         return this.instances;
     }
 
-    public static createInstance(host: string, port: number): ControlCenter {
-        const instance = new ControlCenter(host, port);
+    public static createInstance(host: string, port: number, name?: string): ControlCenter {
+        const instance = new ControlCenter(host, port, name);
         this.instances.push(instance);
         return instance;
     }
@@ -201,6 +201,9 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     }
 
     public getName(): string {
+        if (this.adbName) {
+            return this.adbName;
+        }
         return `aDevice Tracker [${os.hostname()} → ${this.adbHost}:${this.adbPort}]`;
     }
 

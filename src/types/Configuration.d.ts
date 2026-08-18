@@ -40,6 +40,7 @@ export interface ServerItem {
 export interface AdbServerItem {
     host: string;
     port?: number;
+    name?: string;
 }
 
 // The configuration file must contain a single object with this structure

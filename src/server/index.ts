@@ -97,8 +97,8 @@ async function loadGoogModules() {
     // Create one ControlCenter per configured ADB server
     const adbServers = config.adbServers;
     for (const adbServer of adbServers) {
-        ControlCenter.createInstance(adbServer.host, adbServer.port || 5037);
-        console.log(`[ADB] Registered ADB server: ${adbServer.host}:${adbServer.port || 5037}`);
+        ControlCenter.createInstance(adbServer.host, adbServer.port || 5037, adbServer.name);
+        console.log(`[ADB] Registered ADB server: ${adbServer.host}:${adbServer.port || 5037}${adbServer.name ? ` (${adbServer.name})` : ''}`);
     }
 
     if (config.runLocalGoogTracker) {
