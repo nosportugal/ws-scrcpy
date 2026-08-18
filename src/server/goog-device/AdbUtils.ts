@@ -185,6 +185,8 @@ export class AdbUtils {
     ): Promise<{ port: number; host: string }> {
         const port = await portfinder.getPortPromise();
         const server = net.createServer((localSocket) => {
+            // Stop accepting new connections — each forward() call is for one session only.
+            server.close();
             client
                 .openLocal(serial, remote)
                 .then((deviceSocket: net.Socket) => {
@@ -207,10 +209,6 @@ export class AdbUtils {
         await new Promise<void>((resolve, reject) => {
             server.listen(port, '127.0.0.1', () => resolve());
             server.once('error', reject);
-        });
-        // Close the server after the first connection has fully ended so the port is freed.
-        server.once('connection', () => {
-            server.close();
         });
         return { port, host: '127.0.0.1' };
     }
