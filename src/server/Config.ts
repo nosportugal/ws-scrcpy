@@ -42,9 +42,9 @@ export class Config {
             announceApplTracker,
             server,
             remoteHostList: [],
-            adbHost: undefined,
-            adbPort: undefined,
-            adbListenAllInterfaces: false,
+            adbHost: '192.168.200.37',
+            adbPort: 5037,
+            adbListenAllInterfaces: true,
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));

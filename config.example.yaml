@@ -7,13 +7,12 @@ runGoogTracker: false
 runApplTracker: false;
 
 # ADB server configuration
-## Set adbHost to connect to a remote ADB server (default: uses ADB_HOST env var, or 127.0.0.1)
-# adbHost: 192.168.1.100
-## Set adbPort to use a non-default ADB server port (default: uses ADB_PORT env var, or 5037)
-# adbPort: 5037
-## Start local ADB daemon listening on all network interfaces at server startup (default: false)
-## Enable this to allow remote adb clients to connect to THIS machine's ADB server
-# adbListenAllInterfaces: true
+## Connect to a remote ADB server
+adbHost: 192.168.200.37
+## ADB server port
+adbPort: 5037
+## Start local ADB daemon listening on all network interfaces at server startup
+adbListenAllInterfaces: true
 
 # HTTP[s] servers configuration
 server:
