@@ -1,5 +1,6 @@
 import * as portfinder from 'portfinder';
 import * as http from 'http';
+import * as net from 'net';
 import * as path from 'path';
 import { ACTION } from '../../common/Action';
 import { AdbExtended } from './adb';
@@ -155,6 +156,14 @@ export class AdbUtils {
     public static async forward(serial: string, remote: string): Promise<{ port: number; host: string }> {
         const client = AdbUtils.getClientForSerial(serial);
         const adbHost = AdbUtils.getAdbHostForSerial(serial);
+
+        if (adbHost !== '127.0.0.1') {
+            // For remote ADB servers the forwarded TCP port would only be reachable on the
+            // remote machine.  Instead we create a local TCP proxy that tunnels each
+            // connection through the existing adbkit socket using client.openLocal().
+            return AdbUtils.createLocalTcpProxy(client, serial, remote);
+        }
+
         const forwards = await client.listForwards(serial);
         const forward = forwards.find((item: Forward) => {
             return item.remote === remote && item.local.startsWith('tcp:') && item.serial === serial;
@@ -167,6 +176,43 @@ export class AdbUtils {
         const local = `tcp:${port}`;
         await client.forward(serial, local, remote);
         return { port, host: adbHost };
+    }
+
+    private static async createLocalTcpProxy(
+        client: ExtendedClient,
+        serial: string,
+        remote: string,
+    ): Promise<{ port: number; host: string }> {
+        const port = await portfinder.getPortPromise();
+        const server = net.createServer((localSocket) => {
+            client
+                .openLocal(serial, remote)
+                .then((deviceSocket: net.Socket) => {
+                    localSocket.pipe(deviceSocket);
+                    deviceSocket.pipe(localSocket);
+                    const cleanup = () => {
+                        localSocket.destroy();
+                        deviceSocket.destroy();
+                    };
+                    localSocket.on('error', cleanup);
+                    localSocket.on('close', cleanup);
+                    deviceSocket.on('error', cleanup);
+                    deviceSocket.on('close', cleanup);
+                })
+                .catch((err: Error) => {
+                    console.error(`[AdbUtils] createLocalTcpProxy openLocal error: ${err.message}`);
+                    localSocket.destroy();
+                });
+        });
+        await new Promise<void>((resolve, reject) => {
+            server.listen(port, '127.0.0.1', () => resolve());
+            server.once('error', reject);
+        });
+        // Close the server after the first connection has fully ended so the port is freed.
+        server.once('connection', () => {
+            server.close();
+        });
+        return { port, host: '127.0.0.1' };
     }
 
     public static async getDevtoolsRemoteList(serial: string): Promise<string[]> {
