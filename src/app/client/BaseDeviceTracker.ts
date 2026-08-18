@@ -104,6 +104,14 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         return ++this.messageId;
     }
 
+    private static sortDescriptors<D extends BaseDeviceDescriptor>(descriptors: D[]): D[] {
+        return [...descriptors].sort((a, b) => {
+            const aActive = a.state === 'device' ? 0 : 1;
+            const bActive = b.state === 'device' ? 0 : 1;
+            return aActive - bActive;
+        });
+    }
+
     protected buildDeviceTable(): void {
         const devices = this.getOrCreateTableHolder();
         const tbody = this.getOrBuildTableBody(devices);
@@ -111,7 +119,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         if (this.ccBlocks.size === 0) {
             // No CC blocks yet — render the initial placeholder using the legacy single-block path
             const block = this.getOrCreateTrackerBlock(tbody, this.trackerName, this.elementId);
-            this.descriptors.forEach((item) => {
+            BaseDeviceTracker.sortDescriptors(this.descriptors).forEach((item) => {
                 this.buildDeviceRow(block, item);
             });
             return;
@@ -119,7 +127,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
 
         for (const [, cc] of this.ccBlocks) {
             const block = this.getOrCreateTrackerBlock(tbody, cc.trackerName, cc.elementId);
-            cc.descriptors.forEach((item) => {
+            BaseDeviceTracker.sortDescriptors(cc.descriptors).forEach((item) => {
                 this.buildDeviceRow(block, item);
             });
         }
