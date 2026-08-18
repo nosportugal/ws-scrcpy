@@ -248,10 +248,14 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         divider.className = 'page-header-divider';
         const title = document.createElement('span');
         title.className = 'page-header-title';
-        title.textContent = 'NOS Inovação';
+        title.textContent = 'Mobile Labs';
         header.appendChild(logoWrapper);
         header.appendChild(divider);
         header.appendChild(title);
+        const rightLogo = document.createElement('span');
+        rightLogo.className = 'page-header-right-logo';
+        rightLogo.innerHTML = NosInovacaoLogoSVG;
+        header.appendChild(rightLogo);
         document.body.prepend(header);
     }
 

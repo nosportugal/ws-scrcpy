@@ -85,6 +85,17 @@
     }
 }
 
+.page-header-right-logo {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.page-header-right-logo svg {
+    height: 36px;
+    width: auto;
+}
+
 
 body.list {
     height: 100%;
