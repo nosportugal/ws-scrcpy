@@ -170,6 +170,10 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         return title.toLowerCase().replace(/\s/g, '_');
     }
 
+    private static isRemoteHost(hostname: string): boolean {
+        return hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== location.hostname;
+    }
+
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
@@ -178,8 +182,11 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const isActive = device.state === DeviceState.DEVICE;
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
+        const remoteHost =
+            DeviceTracker.isRemoteHost(this.params.hostname) ? this.params.hostname : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
+                <span class="device-android-icon" title="Android device">🤖</span>
                 <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
@@ -190,23 +197,42 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             </div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
+        if (remoteHost) {
+            const header = row.querySelector('.device-header');
+            if (header) {
+                const badge = document.createElement('span');
+                badge.className = 'device-remote-host';
+                badge.title = 'Remote ADB server';
+                badge.textContent = `📡 ${remoteHost}`;
+                header.appendChild(badge);
+            }
+        }
         const services = row.getElementById(servicesId);
         if (!services) {
             return;
         }
+
+        const actionBar = document.createElement('div');
+        actionBar.classList.add('device-action-bar', blockClass);
 
         DeviceTracker.tools.forEach((tool) => {
             const entry = tool.createEntryForDeviceList(device, blockClass, this.params);
             if (entry) {
                 if (Array.isArray(entry)) {
                     entry.forEach((item) => {
-                        item && services.appendChild(item);
+                        if (item) {
+                            actionBar.appendChild(item);
+                        }
                     });
                 } else {
-                    services.appendChild(entry);
+                    actionBar.appendChild(entry);
                 }
             }
         });
+
+        if (actionBar.hasChildNodes()) {
+            services.appendChild(actionBar);
+        }
 
         const streamEntry = StreamClientScrcpy.createEntryForDeviceList(device, blockClass, fullName, this.params);
         streamEntry && services.appendChild(streamEntry);
@@ -263,7 +289,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 stateSpan.classList.add('session-state');
                 if (isBusy) {
                     stateSpan.classList.add('busy');
-                    stateSpan.innerText = 'busy';
+                    stateSpan.innerText = '🔴 BUSY';
                     if (device.busyReason === 'ws+adb') {
                         stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
                     } else if (device.busyReason === 'ws') {
@@ -273,7 +299,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     }
                 } else if (isActive) {
                     stateSpan.classList.add('idle');
-                    stateSpan.innerText = 'idle';
+                    stateSpan.innerText = '🟢 IDLE';
                 } else {
                     const timestamp = device['last.update.timestamp'];
                     stateSpan.classList.add('offline');

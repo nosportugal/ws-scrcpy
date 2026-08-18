@@ -67,10 +67,20 @@ body.list #device_list_menu {
 
 #devices .device-header {
     padding: 2px 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 #devices .device-header div {
     display: inline-flex;
+}
+
+#devices .device-android-icon {
+    font-size: 1.1em;
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 #devices .device-name {
@@ -110,6 +120,16 @@ body.list #device_list_menu {
 
 #devices .device.active .device-state {
     background-color: green;
+}
+
+#devices .device-remote-host {
+    font-size: 75%;
+    color: var(--url-color);
+    background-color: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 4px;
+    white-space: nowrap;
 }
 
 #devices .device-list {
@@ -181,26 +201,60 @@ body.list #device_list_menu {
     padding: 0 .5em;
 }
 
+/* Action bar grouping shell / devtools / list-files */
+#devices .device-list div.device-action-bar {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--device-border-color);
+    border-radius: .3em;
+    overflow: hidden;
+    white-space: nowrap;
+    margin: .3em;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block {
+    margin: 0;
+    border: none;
+    border-right: 1px solid var(--device-border-color);
+    border-radius: 0;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block:last-child {
+    border-right: none;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block a {
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    text-decoration: none;
+}
+
+/* State badge */
 #devices .device-list .session-state {
     align-items: center;
     border-left: 1px solid var(--device-border-color);
     font-size: 85%;
-    padding: 0 .6em;
-    text-transform: uppercase;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 0 .3em .3em 0;
 }
 
 #devices .device-list .session-state.busy {
-    color: #b93a2f;
-    font-weight: 700;
+    color: #fff;
+    background-color: #c0392b;
 }
 
 #devices .device-list .session-state.idle {
-    color: #1f7a3d;
-    font-weight: 700;
+    color: #fff;
+    background-color: #27ae60;
 }
 
 #devices .device-list .session-state.offline {
     color: var(--text-color-light);
+    font-weight: normal;
     text-transform: none;
 }
 
