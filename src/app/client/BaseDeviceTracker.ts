@@ -81,6 +81,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     protected id = '';
     private created = false;
     private messageId = 0;
+    private ccBlocks: Map<string, { elementId: string; trackerName: string; descriptors: DD[] }> = new Map();
 
     protected constructor(params: ParamsDeviceTracker, protected readonly directUrl: string) {
         super(params);
@@ -104,21 +105,31 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     protected buildDeviceTable(): void {
-        const data = this.descriptors;
         const devices = this.getOrCreateTableHolder();
         const tbody = this.getOrBuildTableBody(devices);
 
-        const block = this.getOrCreateTrackerBlock(tbody, this.trackerName);
-        data.forEach((item) => {
-            this.buildDeviceRow(block, item);
-        });
+        if (this.ccBlocks.size === 0) {
+            // No CC blocks yet — render the initial placeholder using the legacy single-block path
+            const block = this.getOrCreateTrackerBlock(tbody, this.trackerName, this.elementId);
+            this.descriptors.forEach((item) => {
+                this.buildDeviceRow(block, item);
+            });
+            return;
+        }
+
+        for (const [, cc] of this.ccBlocks) {
+            const block = this.getOrCreateTrackerBlock(tbody, cc.trackerName, cc.elementId);
+            cc.descriptors.forEach((item) => {
+                this.buildDeviceRow(block, item);
+            });
+        }
     }
 
-    private setNameValue(parent: Element | null, name: string): void {
+    private setNameValue(parent: Element | null, name: string, blockElementId: string): void {
         if (!parent) {
             return;
         }
-        const nameBlockId = `${this.elementId}_name`;
+        const nameBlockId = `${blockElementId}_name`;
         let nameEl = document.getElementById(nameBlockId);
         if (!nameEl) {
             nameEl = document.createElement('div');
@@ -129,19 +140,21 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         parent.insertBefore(nameEl, parent.firstChild);
     }
 
-    private getOrCreateTrackerBlock(parent: Element, controlCenterName: string): Element {
-        let el = document.getElementById(this.elementId);
+    private getOrCreateTrackerBlock(parent: Element, controlCenterName: string, blockElementId: string): Element {
+        let el = document.getElementById(blockElementId);
         if (!el) {
             el = document.createElement('div');
-            el.id = this.elementId;
+            el.id = blockElementId;
             parent.appendChild(el);
-            this.created = true;
+            if (blockElementId === this.elementId) {
+                this.created = true;
+            }
         } else {
             while (el.children.length) {
                 el.removeChild(el.children[0]);
             }
         }
-        this.setNameValue(el, controlCenterName);
+        this.setNameValue(el, controlCenterName, blockElementId);
         return el;
     }
 
@@ -168,16 +181,16 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
         switch (message.type) {
             case BaseDeviceTracker.ACTION_LIST: {
-                const event = message.data as DeviceTrackerEventList<DD>;
-                this.descriptors = event.list;
-                this.setIdAndHostName(event.id, event.name);
+                const evt = message.data as DeviceTrackerEventList<DD>;
+                this.getOrCreateCcBlock(evt.id, evt.name).descriptors = evt.list;
+                this.setIdAndHostName(evt.id, evt.name);
                 this.buildDeviceTable();
                 break;
             }
             case BaseDeviceTracker.ACTION_DEVICE: {
-                const event = message.data as DeviceTrackerEvent<DD>;
-                this.setIdAndHostName(event.id, event.name);
-                this.updateDescriptor(event.device);
+                const evt = message.data as DeviceTrackerEvent<DD>;
+                this.setIdAndHostName(evt.id, evt.name);
+                this.updateDescriptor(evt.device, evt.id);
                 this.buildDeviceTable();
                 break;
             }
@@ -192,7 +205,10 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
         this.id = id;
         this.trackerName = trackerName;
-        this.setNameValue(document.getElementById(this.elementId), trackerName);
+        const cc = this.ccBlocks.get(id);
+        if (cc) {
+            this.setNameValue(document.getElementById(cc.elementId), trackerName, cc.elementId);
+        }
     }
 
     protected getOrCreateTableHolder(): HTMLElement {
@@ -207,15 +223,34 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         return devices;
     }
 
-    protected updateDescriptor(descriptor: DD): void {
-        const idx = this.descriptors.findIndex((item: DD) => {
+    protected updateDescriptor(descriptor: DD, ccId?: string): void {
+        const descriptors = ccId ? (this.ccBlocks.get(ccId)?.descriptors ?? this.descriptors) : this.descriptors;
+        const idx = descriptors.findIndex((item: DD) => {
             return item.udid === descriptor.udid;
         });
         if (idx !== -1) {
-            this.descriptors[idx] = descriptor;
+            descriptors[idx] = descriptor;
         } else {
-            this.descriptors.push(descriptor);
+            descriptors.push(descriptor);
         }
+    }
+
+    private getOrCreateCcBlock(
+        ccId: string,
+        trackerName: string,
+    ): { elementId: string; trackerName: string; descriptors: DD[] } {
+        let cc = this.ccBlocks.get(ccId);
+        if (!cc) {
+            cc = {
+                elementId: `tracker_instance${++BaseDeviceTracker.instanceId}`,
+                trackerName,
+                descriptors: [],
+            };
+            this.ccBlocks.set(ccId, cc);
+        } else {
+            cc.trackerName = trackerName;
+        }
+        return cc;
     }
 
     protected getOrBuildTableBody(parent: HTMLElement): Element {
@@ -235,6 +270,13 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     public getDescriptorByUdid(udid: string): DD | undefined {
+        // Search across all CC blocks first
+        for (const [, cc] of this.ccBlocks) {
+            const found = cc.descriptors.find((descriptor: DD) => descriptor.udid === udid);
+            if (found) {
+                return found;
+            }
+        }
         if (!this.descriptors.length) {
             return;
         }
@@ -245,6 +287,17 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
 
     public destroy(): void {
         super.destroy();
+        // Remove all CC blocks
+        for (const [, cc] of this.ccBlocks) {
+            const el = document.getElementById(cc.elementId);
+            if (el) {
+                const { parentElement } = el;
+                el.remove();
+                if (parentElement && !parentElement.children.length) {
+                    parentElement.remove();
+                }
+            }
+        }
         if (this.created) {
             const el = document.getElementById(this.elementId);
             if (el) {
