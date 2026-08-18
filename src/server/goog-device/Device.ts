@@ -36,12 +36,16 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private updateCount = 0;
     private throttleTimeoutId?: Timeout;
     private lastEmit = 0;
+    private readonly adbHost: string;
+    private readonly adbPort: number;
     public readonly TAG: string;
     public readonly descriptor: GoogDeviceDescriptor;
 
     constructor(public readonly udid: string, state: string, adbHost?: string, adbPort?: number) {
         super();
         this.TAG = `[${udid}]`;
+        this.adbHost = adbHost || '127.0.0.1';
+        this.adbPort = adbPort || 5037;
         this.descriptor = {
             udid,
             state,
@@ -106,7 +110,9 @@ export class Device extends TypedEmitter<DeviceEvents> {
     public async runShellCommandAdb(command: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             const cmd = 'adb';
-            const args = ['-s', `${this.udid}`, 'shell', command];
+            const remoteArgs: string[] =
+                this.adbHost !== '127.0.0.1' ? ['-H', this.adbHost, '-P', String(this.adbPort)] : [];
+            const args = [...remoteArgs, '-s', `${this.udid}`, 'shell', command];
             const adb = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
             let output = '';
 
