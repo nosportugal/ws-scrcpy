@@ -106,13 +106,63 @@ body.list #device_list_menu {
     color: var(--button-text-color);
 }
 
-#devices .device-list div.device:nth-child(2n+1){
-    background-color: var(--device-list-default-color);
+/* ── Grid layout ─────────────────────────────────────── */
+#devices .device-list {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    font-size: var(--font-size);
 }
 
-#devices .device-list div.device:nth-child(2n){
-    background-color: var(--device-list-default-color);
+/* Tracker blocks are direct children of device-list — give them the grid */
+#devices .device-list > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    padding: 4px 24px 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
+
+/* ── Card ─────────────────────────────────────────────── */
+#devices .device-list div.device {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--device-border-color);
+    border-radius: var(--device-card-radius);
+    box-shadow: var(--device-card-shadow);
+    background-color: var(--device-list-default-color);
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+    cursor: default;
+}
+
+#devices .device-list div.device:hover {
+    background-color: var(--device-list-hover-color);
+    border-color: hsl(218, 67%, 75%);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+    transform: translateY(-2px);
+}
+
+#devices .device-list div.device select {
+    color: var(--text-color);
+    background-color: var(--main-bg-color);
+    margin-left: 0;
+    border: none;
+}
+
+#devices .device-list div.device:hover select {
+    background-color: var(--device-list-hover-color);
+}
+
+/* ── Services row (desc-blocks) ───────────────────────── */
+#devices .device-list .services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
 
 #devices .device-header {
     padding: 2px 0;
@@ -179,45 +229,6 @@ body.list #device_list_menu {
     padding: 1px 6px;
     margin-left: 4px;
     white-space: nowrap;
-}
-
-#devices .device-list {
-    position: relative;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-}
-
-#devices .device-list {
-    border-spacing: 0;
-    border-collapse: collapse;
-    font-family: monospace;
-    font-size: var(--font-size);
-}
-
-#devices .device-list div.device {
-    padding: 10px 20px;
-    margin: 6px 12px;
-    border: 1px solid var(--device-border-color);
-    border-radius: var(--device-card-radius);
-    box-shadow: var(--device-card-shadow);
-    background-color: var(--device-list-default-color);
-}
-
-#devices .device-list div.device:hover {
-    background-color: var(--device-list-hover-color);
-    border-color: hsl(218, 67%, 75%);
-}
-
-#devices .device-list div.device select {
-    color: var(--text-color);
-    background-color: var(--main-bg-color);
-    margin-left: 0;
-    border: none;
-}
-
-#devices .device-list div.device:hover select {
-    background-color: var(--device-list-hover-color);;
 }
 
 #devices .device-list div.desc-block {
@@ -364,10 +375,11 @@ body.list #device_list_menu {
 }
 
 #devices .tracker-name {
-    padding: 12px 20px 4px;
+    padding: 12px 4px 4px;
     font-weight: bolder;
     letter-spacing: 0.02em;
     color: var(--text-color-light);
     text-transform: uppercase;
     font-size: 0.75em;
+    grid-column: 1 / -1;
 }
