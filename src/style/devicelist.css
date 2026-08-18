@@ -43,8 +43,27 @@
 }
 
 .page-header-logo {
-    font-size: 28px;
+    display: flex;
+    align-items: center;
     line-height: 1;
+}
+
+.page-header-logo svg {
+    height: 40px;
+    width: auto;
+}
+
+.page-header-divider {
+    width: 1px;
+    height: 32px;
+    background: hsl(220, 13%, 78%);
+    margin: 0 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .page-header-divider {
+        background: hsl(220, 13%, 38%);
+    }
 }
 
 .page-header-title {

@@ -9,6 +9,7 @@ import { HostItem } from '../../types/Configuration';
 import { Tool } from './Tool';
 import Util from '../Util';
 import { EventMap } from '../../common/TypedEmitter';
+import NosInovacaoLogoSVG from '../../public/images/nos-inovacao-logo.svg';
 
 const TAG = '[BaseDeviceTracker]';
 
@@ -240,13 +241,16 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
         const header = document.createElement('header');
         header.id = BaseDeviceTracker.PAGE_HEADER_ID;
-        const logo = document.createElement('span');
-        logo.className = 'page-header-logo';
-        logo.textContent = '📱';
+        const logoWrapper = document.createElement('span');
+        logoWrapper.className = 'page-header-logo';
+        logoWrapper.innerHTML = NosInovacaoLogoSVG;
+        const divider = document.createElement('span');
+        divider.className = 'page-header-divider';
         const title = document.createElement('span');
         title.className = 'page-header-title';
         title.textContent = 'Mobile Labs';
-        header.appendChild(logo);
+        header.appendChild(logoWrapper);
+        header.appendChild(divider);
         header.appendChild(title);
         document.body.prepend(header);
     }
