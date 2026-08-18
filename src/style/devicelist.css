@@ -286,6 +286,14 @@ body.list #device_list_menu {
     color: var(--button-text-color);
 }
 
+#devices .device-list div.desc-block.stream > a {
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    text-decoration: none;
+}
+
 #devices .device-list div.desc-block button {
     fill: var(--text-color)
 }
