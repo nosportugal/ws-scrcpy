@@ -183,7 +183,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
         const remoteHost =
-            DeviceTracker.isRemoteHost(this.params.hostname) ? this.params.hostname : '';
+            DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? (this.params.hostname ?? '') : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
