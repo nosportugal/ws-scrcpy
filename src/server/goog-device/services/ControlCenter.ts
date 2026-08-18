@@ -1,7 +1,7 @@
 import { TrackerChangeSet } from '@dead50f7/adbkit/lib/TrackerChangeSet';
 import { Device } from '../Device';
 import { Service } from '../../services/Service';
-import AdbKitClient from '@dead50f7/adbkit/lib/adb/client';
+import { ExtendedClient } from '../adb/ExtendedClient';
 import { AdbExtended } from '../adb';
 import GoogDeviceDescriptor from '../../../types/GoogDeviceDescriptor';
 import Tracker from '@dead50f7/adbkit/lib/adb/tracker';
@@ -18,7 +18,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     private static instances: ControlCenter[] = [];
 
     private initialized = false;
-    private client: AdbKitClient;
+    private client: ExtendedClient;
     private tracker?: Tracker;
     private waitAfterError = 1000;
     private restartTimeoutId?: Timeout;
@@ -179,7 +179,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         return undefined;
     }
 
-    public getClient(): AdbKitClient {
+    public getClient(): ExtendedClient {
         return this.client;
     }
 

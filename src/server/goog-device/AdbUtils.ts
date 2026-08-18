@@ -15,7 +15,7 @@ import { Multiplexer } from '../../packages/multiplexer/Multiplexer';
 import { ReadStream } from 'fs';
 import PushTransfer from '@dead50f7/adbkit/lib/adb/sync/pushtransfer';
 import { ControlCenter } from './services/ControlCenter';
-import AdbKitClient from '@dead50f7/adbkit/lib/adb/client';
+import { ExtendedClient } from './adb/ExtendedClient';
 
 type IncomingMessage = {
     statusCode?: number;
@@ -28,7 +28,7 @@ const fakeHost = '127.0.0.1:6666';
 const fakeHostRe = /127\.0\.0\.1:6666/;
 
 export class AdbUtils {
-    private static getClientForSerial(serial: string): AdbKitClient {
+    private static getClientForSerial(serial: string): ExtendedClient {
         const instance = ControlCenter.findInstanceForUdid(serial);
         if (instance) {
             return instance.getClient();
