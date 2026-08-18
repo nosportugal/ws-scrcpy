@@ -170,6 +170,27 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         this.initialized = false;
     }
 
+    public static findInstanceForUdid(udid: string): ControlCenter | undefined {
+        for (const instance of ControlCenter.instances) {
+            if (instance.getDevice(udid)) {
+                return instance;
+            }
+        }
+        return undefined;
+    }
+
+    public getClient(): AdbKitClient {
+        return this.client;
+    }
+
+    public get host(): string {
+        return this.adbHost;
+    }
+
+    public get port(): number {
+        return this.adbPort;
+    }
+
     public static getAllDevices(): GoogDeviceDescriptor[] {
         const all: GoogDeviceDescriptor[] = [];
         for (const instance of ControlCenter.instances) {
