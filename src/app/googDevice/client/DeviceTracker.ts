@@ -175,6 +175,15 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     }
 
     private static getCommercialName(device: GoogDeviceDescriptor): string {
+        const manufacturer = device['ro.product.manufacturer'].toLowerCase();
+        if (manufacturer === 'samsung') {
+            const marketingName = device['ro.config.marketing_name'];
+            const model = device['ro.product.model'];
+            if (marketingName && model) {
+                return `${marketingName} (${model})`;
+            }
+            return marketingName || model || `samsung ${model}`.trim();
+        }
         return (
             device['ro.product.marketname'] ||
             device['ro.config.marketing_name'] ||

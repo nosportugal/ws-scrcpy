@@ -195,8 +195,14 @@ export class Device extends TypedEmitter<DeviceEvents> {
         const wifiIface = this.descriptor['wifi.interface'];
         if (wifiIface) {
             if (!this.wifiInfoFetched) {
-                this.cachedWifiInfo = await this.getWifiInfo(wifiIface);
-                this.wifiInfoFetched = true;
+                // Skip fetch if the device shell is currently in use to avoid disrupting
+                // any active interactive shell session; retry on the next update cycle.
+                if (this.descriptor.wsBusy) {
+                    // leave wifiInfoFetched = false so we retry when the session ends
+                } else {
+                    this.cachedWifiInfo = await this.getWifiInfo(wifiIface);
+                    this.wifiInfoFetched = true;
+                }
             }
             if (this.cachedWifiInfo !== undefined) {
                 list.forEach((iface) => {
