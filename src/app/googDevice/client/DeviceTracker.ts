@@ -184,9 +184,10 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     }
 
     private static getWifiBand(freqMHz: number): string {
-        if (freqMHz >= 5925) return '6 GHz';
-        if (freqMHz >= 5000) return '5 GHz';
-        if (freqMHz >= 2412) return '2.4 GHz';
+        if (freqMHz >= 6425) return 'WiFi 7';
+        if (freqMHz >= 5925) return 'WiFi 6E';
+        if (freqMHz >= 5000) return 'WiFi 5';
+        if (freqMHz >= 2412) return 'WiFi 4';
         return `${freqMHz} MHz`;
     }
 
