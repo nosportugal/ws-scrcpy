@@ -182,7 +182,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             if (marketingName && model) {
                 return `${marketingName} (${model})`;
             }
-            return marketingName || model || `samsung ${model}`.trim();
+            return marketingName || (model ? `Samsung ${model}` : 'Samsung');
         }
         return (
             device['ro.product.marketname'] ||
