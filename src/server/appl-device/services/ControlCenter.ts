@@ -12,7 +12,6 @@ import { DeviceDetails } from '../../../types/DeviceDetails';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
-    private readonly TAG = '[ControlCenter][Cambrionix]';
 
     private initialized = false;
     private tracker?: IOSDeviceLib.IOSDeviceLib;
@@ -46,8 +45,6 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         const productType = device.productType || '<NoModel>';
         const version = device.productVersion || '<NoVersion>';
         const model = ProductType.getModel(productType);
-        const previous = this.descriptors.get(udid);
-        const details = this.mergeDetailsWithNative(previous?.details, name, model, state);
         const descriptor = {
             udid,
             name,
@@ -55,19 +52,11 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             version,
             state,
             'last.update.timestamp': Date.now(),
-            details,
+            details: this.createNativeDetails(name, model, state),
         };
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
-        this.refreshEnrichedDetails(
-            descriptor,
-            this.collectEnrichmentIdentifiers(
-                udid,
-                (device as unknown as Record<string, unknown>).serialNumber,
-                (device as unknown as Record<string, unknown>).serial,
-                (device as unknown as Record<string, unknown>).udid,
-            ),
-        );
+        this.refreshEnrichedDetails(descriptor);
     };
 
     private onDeviceLost = (device: IOSDeviceLib.IDeviceActionInfo): void => {
@@ -157,7 +146,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             healthStatus: 'Unknown',
             connectionStatus: state || 'Unknown',
             source: 'native',
-            enrichmentState: 'idle',
+            enrichmentState: this.cambrionixEnricher.isEnabled() ? 'loading' : 'idle',
             enrichmentMessage: this.cambrionixEnricher.isEnabled()
                 ? 'Awaiting Cambrionix enrichment'
                 : 'Cambrionix disabled',
@@ -165,62 +154,20 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         };
     }
 
-    private mergeDetailsWithNative(
-        previous: DeviceDetails | undefined,
-        name: string,
-        model: string,
-        state: string,
-    ): DeviceDetails {
-        const native = this.createNativeDetails(name, model, state);
-        if (!previous) {
-            return native;
-        }
-        return {
-            ...native,
-            ...previous,
-            connectionStatus: state || previous.connectionStatus || native.connectionStatus,
-            updatedAt: Date.now(),
-        };
-    }
-
-    private collectEnrichmentIdentifiers(...values: unknown[]): string[] {
-        const identifiers = values
-            .filter((value): value is string => typeof value === 'string')
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0);
-        return Array.from(new Set(identifiers));
-    }
-
-    private refreshEnrichedDetails(descriptor: ApplDeviceDescriptor, identifiers: string[]): void {
+    private refreshEnrichedDetails(descriptor: ApplDeviceDescriptor): void {
         if (!this.cambrionixEnricher.isEnabled()) {
             return;
         }
         const udid = descriptor.udid;
         const now = Date.now();
         const last = this.lastEnrichByUdid.get(udid) || 0;
-        if (this.enrichInFlightByUdid.get(udid)) {
-            console.info(`${this.TAG} skip enrich ${udid}: request already in flight`);
+        if (this.enrichInFlightByUdid.get(udid) || now - last < this.cambrionixEnricher.getPollIntervalMs()) {
             return;
         }
-        if (now - last < this.cambrionixEnricher.getPollIntervalMs()) {
-            console.info(`${this.TAG} skip enrich ${udid}: poll interval not reached`);
-            return;
-        }
-        console.info(`${this.TAG} start enrich ${udid}`);
         this.lastEnrichByUdid.set(udid, now);
         this.enrichInFlightByUdid.set(udid, true);
-        const current = this.descriptors.get(udid);
-        if (current?.details && current.details.enrichmentState !== 'ready') {
-            current.details = {
-                ...current.details,
-                enrichmentState: 'loading',
-                enrichmentMessage: 'Fetching Cambrionix details',
-                updatedAt: Date.now(),
-            };
-            this.emit('device', current);
-        }
         this.cambrionixEnricher
-            .enrichByIdentifier(...identifiers)
+            .enrichByIdentifier(udid)
             .then((cambrionixDetails) => {
                 const current = this.descriptors.get(udid);
                 if (!current) {
@@ -228,14 +175,12 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
                 }
                 const native = this.createNativeDetails(current.name, current.model, current.state);
                 if (!cambrionixDetails) {
-                    console.info(`${this.TAG} enrich finished ${udid}: no Cambrionix match`);
                     current.details = {
                         ...native,
                         enrichmentState: 'unavailable',
                         enrichmentMessage: 'Cambrionix details not found',
                     };
                 } else {
-                    console.info(`${this.TAG} enrich finished ${udid}: details merged`);
                     current.details = {
                         ...native,
                         ...cambrionixDetails,
@@ -248,7 +193,6 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
                 this.emit('device', current);
             })
             .catch((error: Error) => {
-                console.warn(`${this.TAG} enrich failed ${udid}: ${error.message}`);
                 const current = this.descriptors.get(udid);
                 if (!current) {
                     return;

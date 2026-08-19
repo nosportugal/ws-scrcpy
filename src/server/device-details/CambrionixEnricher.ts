@@ -12,7 +12,6 @@ type NormalizedCambrionixDevice = {
 
 export class CambrionixEnricher {
     private static instance?: CambrionixEnricher;
-    private readonly TAG = '[CambrionixEnricher]';
     private cacheExpiresAt = 0;
     private normalizedDevices: NormalizedCambrionixDevice[] = [];
     private loadingPromise?: Promise<NormalizedCambrionixDevice[]>;
@@ -39,17 +38,10 @@ export class CambrionixEnricher {
         }
         const idList = identifiers.map(this.normalize).filter((value) => !!value);
         if (!idList.length) {
-            console.info(`${this.TAG} skip enrich: no valid identifiers`);
             return;
         }
         const devices = await this.getNormalizedDevices();
-        const idSet = new Set(idList);
-        const match = devices.find((item) => item.identifiers.some((identifier) => idSet.has(identifier)));
-        if (!match) {
-            console.info(`${this.TAG} no match for identifiers: ${idList.join(', ')}`);
-            return;
-        }
-        console.info(`${this.TAG} match found for identifiers: ${idList.join(', ')}`);
+        const match = devices.find((item) => item.identifiers.some((identifier) => idList.includes(identifier)));
         return match?.details;
     }
 
@@ -82,9 +74,8 @@ export class CambrionixEnricher {
                 return this.normalizeDevicesPayload(response);
             } catch (error) {
                 lastError = error as Error;
-                console.warn(`${this.TAG} enrichment fetch attempt ${attempt + 1} failed: ${lastError.message}`);
                 if (attempt < retryCount) {
-                    console.warn(`${this.TAG} retry ${attempt + 1}/${retryCount}`);
+                    console.warn(`[Cambrionix] Enrichment fetch retry ${attempt + 1}/${retryCount}`);
                 }
             }
         }
@@ -170,19 +161,7 @@ export class CambrionixEnricher {
     }
 
     private extractIdentifiers(payload: Record<string, unknown>): string[] {
-        const keys = [
-            'udid',
-            'uuid',
-            'serial',
-            'serialNumber',
-            'serial_number',
-            'deviceId',
-            'device_id',
-            'deviceUdid',
-            'device_udid',
-            'ecid',
-            'id',
-        ];
+        const keys = ['udid', 'serial', 'serialNumber', 'serial_number', 'deviceId', 'device_id', 'id'];
         const result: string[] = [];
         keys.forEach((key) => {
             const value = payload[key];

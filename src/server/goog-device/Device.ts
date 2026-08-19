@@ -417,8 +417,13 @@ export class Device extends TypedEmitter<DeviceEvents> {
 
     private refreshNativeDetails(): void {
         const existing = this.descriptor.details;
-        const state = this.resolveNativeEnrichmentState(existing?.enrichmentState);
-        const message = this.resolveNativeEnrichmentMessage(state, existing?.enrichmentMessage);
+        const state = existing?.enrichmentState === 'ready' ? 'ready' : existing?.enrichmentState || 'loading';
+        const message =
+            state === 'ready'
+                ? existing?.enrichmentMessage || ''
+                : this.connected
+                ? 'Awaiting Cambrionix enrichment'
+                : 'Device offline';
         this.descriptor.details = {
             ...this.createNativeDetails(state, message),
             usbHub: existing?.usbHub || this.unknownValue(),
@@ -427,39 +432,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
             healthStatus: existing?.healthStatus || this.unknownValue(),
             source: existing?.source || 'native',
         };
-    }
-
-    private resolveNativeEnrichmentState(previousState?: DeviceDetails['enrichmentState']): DeviceDetails['enrichmentState'] {
-        if (!this.connected || !this.cambrionixEnricher.isEnabled()) {
-            return 'idle';
-        }
-        if (this.cambrionixRequestInFlight) {
-            return 'loading';
-        }
-        if (previousState && previousState !== 'loading') {
-            return previousState;
-        }
-        return 'idle';
-    }
-
-    private resolveNativeEnrichmentMessage(
-        state: DeviceDetails['enrichmentState'],
-        previousMessage?: string,
-    ): string {
-        switch (state) {
-            case 'ready':
-                return previousMessage || 'Enriched by Cambrionix';
-            case 'unavailable':
-            case 'error':
-                return previousMessage || 'Cambrionix details not found';
-            case 'loading':
-                return previousMessage || 'Fetching Cambrionix details';
-            default:
-                if (!this.connected) {
-                    return 'Device offline';
-                }
-                return this.cambrionixEnricher.isEnabled() ? 'Awaiting Cambrionix enrichment' : 'Cambrionix disabled';
-        }
     }
 
     private createNativeDetails(state: DeviceDetails['enrichmentState'], enrichmentMessage: string): DeviceDetails {
@@ -499,15 +471,12 @@ export class Device extends TypedEmitter<DeviceEvents> {
             return;
         }
         const now = Date.now();
-        if (this.cambrionixRequestInFlight) {
-            console.info(`${this.TAG} [Cambrionix] skip enrich ${this.udid}: request already in flight`);
+        if (
+            this.cambrionixRequestInFlight ||
+            now - this.lastCambrionixRequestAt < this.cambrionixEnricher.getPollIntervalMs()
+        ) {
             return;
         }
-        if (now - this.lastCambrionixRequestAt < this.cambrionixEnricher.getPollIntervalMs()) {
-            console.info(`${this.TAG} [Cambrionix] skip enrich ${this.udid}: poll interval not reached`);
-            return;
-        }
-        console.info(`${this.TAG} [Cambrionix] start enrich ${this.udid}`);
         this.lastCambrionixRequestAt = now;
         this.cambrionixRequestInFlight = true;
         const detailsBefore = this.descriptor.details;
@@ -521,11 +490,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
             this.emitUpdate();
         }
         this.cambrionixEnricher
-            .enrichByIdentifier(...this.collectEnrichmentIdentifiers())
+            .enrichByIdentifier(this.udid)
             .then((cambrionixDetails) => {
                 const native = this.createNativeDetails('loading', '');
                 if (!cambrionixDetails) {
-                    console.info(`${this.TAG} [Cambrionix] enrich finished ${this.udid}: no Cambrionix match`);
                     this.descriptor.details = {
                         ...native,
                         source: 'native',
@@ -535,7 +503,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
                     this.emitUpdate();
                     return;
                 }
-                console.info(`${this.TAG} [Cambrionix] enrich finished ${this.udid}: details merged`);
                 this.descriptor.details = {
                     ...native,
                     ...cambrionixDetails,
@@ -547,7 +514,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 this.emitUpdate();
             })
             .catch((error: Error) => {
-                console.warn(`${this.TAG} [Cambrionix] enrich failed ${this.udid}: ${error.message}`);
                 this.descriptor.details = {
                     ...this.createNativeDetails('error', error.message),
                     source: 'native',
@@ -557,21 +523,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
             .finally(() => {
                 this.cambrionixRequestInFlight = false;
             });
-    }
-
-    private collectEnrichmentIdentifiers(): string[] {
-        const props = this.properties;
-        const identifiers = [
-            this.udid,
-            props?.['ro.serialno'],
-            props?.['ro.boot.serialno'],
-            props?.['ril.serialnumber'],
-            props?.['ro.ril.oem.imei'],
-        ]
-            .filter((value): value is string => typeof value === 'string')
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0);
-        return Array.from(new Set(identifiers));
     }
 
     private unknownValue(): string {
