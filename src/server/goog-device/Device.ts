@@ -30,8 +30,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
     private properties?: Record<string, string>;
-    private cachedWifiInfo?: { freqMHz: number; generation: number | '6E' };
-    private wifiInfoFetched = false;
     private spawnServer = true;
     private updateTimeoutId?: Timeout;
     private updateTimeout = Device.INITIAL_UPDATE_TIMEOUT;
@@ -77,8 +75,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
         if (state === 'device') {
             this.connected = true;
             this.properties = undefined;
-            this.cachedWifiInfo = undefined;
-            this.wifiInfoFetched = false;
         } else {
             this.connected = false;
         }
@@ -177,8 +173,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
         return 0;
     };
 
-    private static readonly SAFE_IFACE_PATTERN = /^[a-zA-Z0-9_.-]+$/;
-
     public async getNetInterfaces(): Promise<NetInterface[]> {
         if (!this.connected) {
             return [];
@@ -194,100 +188,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             list.push({ name, ipv4 });
         });
 
-        const wifiIface = this.descriptor['wifi.interface'];
-        if (wifiIface && Device.SAFE_IFACE_PATTERN.test(wifiIface)) {
-            if (!this.wifiInfoFetched) {
-                // Skip fetch if the device shell is currently in use to avoid disrupting
-                // any active interactive shell session; retry on the next update cycle.
-                if (this.descriptor.wsBusy) {
-                    // leave wifiInfoFetched = false so we retry when the session ends
-                } else {
-                    this.cachedWifiInfo = await this.getWifiInfo(wifiIface);
-                    this.wifiInfoFetched = true;
-                }
-            }
-            if (this.cachedWifiInfo !== undefined) {
-                list.forEach((iface) => {
-                    if (iface.name === wifiIface) {
-                        iface.wifiFreqMHz = this.cachedWifiInfo!.freqMHz;
-                        iface.wifiGeneration = this.cachedWifiInfo!.generation;
-                    }
-                });
-            }
-        } else {
-            // wifi.interface not yet populated — allow retry on next cycle
-            this.wifiInfoFetched = false;
-        }
-
         return list.sort(this.interfacesSort);
-    }
-
-    private async getWifiInfo(iface: string): Promise<{ freqMHz: number; generation: number | '6E' } | undefined> {
-        // Method 1: wpa_cli status — available on most Android devices
-        try {
-            const wpaOutput = await this.runShellCommandAdbKit(`wpa_cli -i ${iface} status 2>/dev/null`);
-            const freqMatch = wpaOutput.match(/^freq\s*=\s*(\d+)/im);
-            if (freqMatch) {
-                const freqMHz = parseInt(freqMatch[1], 10);
-                // wpa_cli may report wifi_generation directly
-                const genMatch = wpaOutput.match(/^wifi_generation\s*=\s*(\d+)/im);
-                const generation = genMatch
-                    ? (parseInt(genMatch[1], 10) as number)
-                    : Device.wifiGenerationFromFreqAndProtocol(freqMHz, wpaOutput);
-                return { freqMHz, generation };
-            }
-        } catch {
-            // wpa_cli not available; try next method
-        }
-
-        // Method 2: iw dev link
-        try {
-            const iwOutput = await this.runShellCommandAdbKit(`iw dev ${iface} link 2>/dev/null`);
-            const freqMatch = iwOutput.match(/freq:\s*(\d+)/i);
-            if (freqMatch) {
-                const freqMHz = parseInt(freqMatch[1], 10);
-                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, iwOutput);
-                return { freqMHz, generation };
-            }
-        } catch {
-            // iw not available; try next method
-        }
-
-        // Method 3: iwconfig
-        try {
-            const iwconfigOutput = await this.runShellCommandAdbKit(`iwconfig ${iface} 2>/dev/null`);
-            const freqMatchIw = iwconfigOutput.match(/Frequency[=:](\d+(?:\.\d+)?)\s*([GMk]?)Hz/i);
-            if (freqMatchIw) {
-                const value = parseFloat(freqMatchIw[1]);
-                const unit = freqMatchIw[2].toUpperCase();
-                let freqMHz: number;
-                if (unit === 'G') freqMHz = Math.round(value * 1000);
-                else if (unit === 'K') freqMHz = Math.round(value / 1000);
-                else freqMHz = Math.round(value);
-                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, iwconfigOutput);
-                return { freqMHz, generation };
-            }
-        } catch {
-            // iwconfig not available either
-        }
-
-        return undefined;
-    }
-
-    private static wifiGenerationFromFreqAndProtocol(freqMHz: number, iwOutput: string): number | '6E' {
-        // WiFi 7 (EHT) — 6 GHz high band (≥6425 MHz) or EHT capability string
-        if (freqMHz >= 6425 || /\beht\b/i.test(iwOutput)) return 7;
-        // WiFi 6E — 6 GHz low band (5925–6424 MHz)
-        if (freqMHz >= 5925) return '6E';
-        // HE (High Efficiency) indicates WiFi 6 — match capability headings from iw/wpa_cli
-        if (/\bHE\s+(PHY|MAC|Capabilities|GI)\b/i.test(iwOutput) || /\bhe_capabilities\b/i.test(iwOutput)) return 6;
-        // VHT (Very High Throughput) indicates WiFi 5, 5 GHz only
-        if (/\bVHT\s+(Capabilities|Operation|TX MCS|RX MCS)\b/i.test(iwOutput) || /\bvht_capabilities\b/i.test(iwOutput)) return 5;
-        // HT (High Throughput) indicates WiFi 4
-        if (/\bHT\s+(Capabilities|Operation|TX MCS|RX MCS)\b/i.test(iwOutput) || /\bht_capabilities\b/i.test(iwOutput)) return 4;
-        // Fallback: guess from frequency
-        if (freqMHz >= 5000) return 5;
-        return 4;
     }
 
     private async pidOf(processName: string): Promise<number[]> {
@@ -543,9 +444,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 old.forEach((value, idx) => {
                     if (
                         value.name !== interfaces[idx].name ||
-                        value.ipv4 !== interfaces[idx].ipv4 ||
-                        value.wifiFreqMHz !== interfaces[idx].wifiFreqMHz ||
-                        value.wifiGeneration !== interfaces[idx].wifiGeneration
+                        value.ipv4 !== interfaces[idx].ipv4
                     ) {
                         changed = true;
                     }
