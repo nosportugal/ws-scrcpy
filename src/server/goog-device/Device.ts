@@ -221,6 +221,20 @@ export class Device extends TypedEmitter<DeviceEvents> {
     }
 
     private async getWifiInfo(iface: string): Promise<{ freqMHz: number; generation: number | '6E' } | undefined> {
+        // Method 1: wpa_cli status — available on most Android devices
+        try {
+            const wpaOutput = await this.runShellCommandAdbKit(`wpa_cli -i ${iface} status 2>/dev/null`);
+            const freqMatch = wpaOutput.match(/^freq\s*=\s*(\d+)/im);
+            if (freqMatch) {
+                const freqMHz = parseInt(freqMatch[1], 10);
+                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, wpaOutput);
+                return { freqMHz, generation };
+            }
+        } catch {
+            // wpa_cli not available; try next method
+        }
+
+        // Method 2: iw dev link
         try {
             const iwOutput = await this.runShellCommandAdbKit(`iw dev ${iface} link 2>/dev/null`);
             const freqMatch = iwOutput.match(/freq:\s*(\d+)/i);
@@ -229,6 +243,12 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, iwOutput);
                 return { freqMHz, generation };
             }
+        } catch {
+            // iw not available; try next method
+        }
+
+        // Method 3: iwconfig
+        try {
             const iwconfigOutput = await this.runShellCommandAdbKit(`iwconfig ${iface} 2>/dev/null`);
             const freqMatchIw = iwconfigOutput.match(/Frequency[=:](\d+(?:\.\d+)?)\s*([GMk]?)Hz/i);
             if (freqMatchIw) {
@@ -242,8 +262,9 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 return { freqMHz, generation };
             }
         } catch {
-            // Best effort; not all devices support iw/iwconfig.
+            // iwconfig not available either
         }
+
         return undefined;
     }
 

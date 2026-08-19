@@ -281,11 +281,17 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.desc-block.stream > a {
-    padding: 2px 8px;
+    padding: 4px 14px;
     display: inline-flex;
     align-items: center;
-    font-size: 85%;
+    font-size: 90%;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-decoration: none;
+}
+
+#devices .device-list .device.active div.desc-block.stream > a:hover {
+    background-color: var(--device-list-hover-color);
 }
 
 #devices .device-list div.desc-block button {
