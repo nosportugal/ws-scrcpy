@@ -87,7 +87,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     protected constructor(params: ParamsDeviceTracker, protected readonly directUrl: string) {
         super(params);
         this.elementId = `tracker_instance${++BaseDeviceTracker.instanceId}`;
-        this.trackerName = `⏳ A ligar a ${params.hostname ?? location.hostname}…`;
+        this.trackerName = params.hostname ?? location.hostname;
         this.setBodyClass('list');
         this.setTitle();
     }

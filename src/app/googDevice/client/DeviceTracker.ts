@@ -219,8 +219,8 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 <div class="device-name" title="${nameTitle}">${commercialName}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
-                    <div class="release-version">${device['ro.build.version.release']}</div>
-                    <div class="sdk-version">${device['ro.build.version.sdk']}</div>
+                    <div class="release-version">Android ${device['ro.build.version.release']}</div>
+                    <div class="sdk-version">API ${device['ro.build.version.sdk']}</div>
                 </div>
                 ${wifiBandText ? `<div class="device-wifi-band" title="WiFi band (${wifiIface})">📶 ${wifiBandText}</div>` : ''}
                 <div class="device-state" title="State: ${device.state}"></div>

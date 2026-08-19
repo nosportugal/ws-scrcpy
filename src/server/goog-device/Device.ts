@@ -410,7 +410,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 }
                 return true;
             });
-            const netIntPromise = this.updateInterfaces().then((interfaces) => {
+            // Chain interface update after props so that wifi.interface is already set
+            const netIntPromise = propsPromise.then(() => this.updateInterfaces()).then((interfaces) => {
                 return !!interfaces.length;
             });
             const adbBusyPromise = this.detectAdbBusy().then((isBusy) => {
