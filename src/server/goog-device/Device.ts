@@ -60,6 +60,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
             'ro.build.version.sdk': '',
             'ro.product.manufacturer': '',
             'ro.product.model': '',
+            'ro.product.marketname': '',
+            'ro.config.marketing_name': '',
+            'ro.vendor.oplus.market.name': '',
+            'ro.hardware.wifi': '',
             'ro.product.cpu.abi': '',
             'last.update.timestamp': 0,
         };
@@ -183,7 +187,41 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const ipv4 = ipAndMask.split('/')[0];
             list.push({ name, ipv4 });
         });
+
+        const wifiIface = this.descriptor['wifi.interface'];
+        if (wifiIface) {
+            const freqMHz = await this.getWifiFrequencyMHz(wifiIface);
+            list.forEach((iface) => {
+                if (iface.name === wifiIface && freqMHz !== undefined) {
+                    iface.wifiFreqMHz = freqMHz;
+                }
+            });
+        }
+
         return list.sort(this.interfacesSort);
+    }
+
+    private async getWifiFrequencyMHz(iface: string): Promise<number | undefined> {
+        try {
+            const iwOutput = await this.runShellCommandAdbKit(`iw dev ${iface} link 2>/dev/null`);
+            const freqMatch = iwOutput.match(/freq:\s*(\d+)/i);
+            if (freqMatch) {
+                return parseInt(freqMatch[1], 10);
+            }
+            const iwconfigOutput = await this.runShellCommandAdbKit(`iwconfig ${iface} 2>/dev/null`);
+            const freqMatchIw = iwconfigOutput.match(/Frequency[=:](\d+(?:\.\d+)?)\s*([GMk]?)Hz/i);
+            if (freqMatchIw) {
+                const value = parseFloat(freqMatchIw[1]);
+                const unit = freqMatchIw[2].toUpperCase();
+                if (unit === 'G') return Math.round(value * 1000);
+                if (unit === 'K') return Math.round(value / 1000);
+                // 'M' or no unit prefix — treat as MHz
+                return Math.round(value);
+            }
+        } catch {
+            // Best effort; not all devices support iw/iwconfig.
+        }
+        return undefined;
     }
 
     private async pidOf(processName: string): Promise<number[]> {

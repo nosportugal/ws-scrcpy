@@ -174,6 +174,22 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         return hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== location.hostname;
     }
 
+    private static getCommercialName(device: GoogDeviceDescriptor): string {
+        return (
+            device['ro.product.marketname'] ||
+            device['ro.config.marketing_name'] ||
+            device['ro.vendor.oplus.market.name'] ||
+            `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim()
+        );
+    }
+
+    private static getWifiBand(freqMHz: number): string {
+        if (freqMHz >= 5925) return '6 GHz';
+        if (freqMHz >= 5000) return '5 GHz';
+        if (freqMHz >= 2412) return '2.4 GHz';
+        return `${freqMHz} MHz`;
+    }
+
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
@@ -184,10 +200,13 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const servicesId = `device_services_${fullName}`;
         const remoteHost =
             DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? (this.params.hostname ?? '') : '';
+        const commercialName = DeviceTracker.getCommercialName(device);
+        const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
+        const nameTitle = commercialName !== technicalName ? technicalName : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
-                <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
+                <div class="device-name" title="${nameTitle}">${commercialName}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
                     <div class="release-version">${device['ro.build.version.release']}</div>
@@ -333,7 +352,12 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     };
                     const url = DeviceTracker.createUrl(params).toString();
                     const optionElement = DeviceTracker.createInterfaceOption(value.name, url);
-                    optionElement.innerText = `${value.name}: ${value.ipv4}`;
+                    const isWifi = device['wifi.interface'] === value.name;
+                    let label = `${value.name}: ${value.ipv4}`;
+                    if (isWifi && value.wifiFreqMHz) {
+                        label += ` (${DeviceTracker.getWifiBand(value.wifiFreqMHz)})`;
+                    }
+                    optionElement.innerText = label;
                     selectElement.appendChild(optionElement);
                     if (lastSelected) {
                         if (lastSelected === value.name || !selectedInterfaceName) {
