@@ -310,7 +310,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 stateSpan.classList.add('session-state');
                 if (isBusy) {
                     stateSpan.classList.add('busy');
-                    stateSpan.innerText = '🔴 BUSY';
+                    stateSpan.innerText = 'BUSY';
                     if (device.busyReason === 'ws+adb') {
                         stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
                     } else if (device.busyReason === 'ws') {
@@ -320,7 +320,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     }
                 } else if (isActive) {
                     stateSpan.classList.add('idle');
-                    stateSpan.innerText = '🟢 IDLE';
+                    stateSpan.innerText = 'IDLE';
                 } else {
                     const timestamp = device['last.update.timestamp'];
                     stateSpan.classList.add('offline');
