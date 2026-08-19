@@ -328,6 +328,7 @@ body.list #device_list_menu {
 
 /* State badge */
 #devices .device-list .session-state {
+    display: inline-flex;
     align-items: center;
     border-left: 1px solid var(--device-border-color);
     font-size: 85%;
