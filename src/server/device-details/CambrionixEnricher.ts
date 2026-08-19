@@ -50,7 +50,7 @@ export class CambrionixEnricher {
             return;
         }
         console.info(`${this.TAG} match found for identifiers: ${idList.join(', ')}`);
-        return match?.details;
+        return match.details;
     }
 
     private async getNormalizedDevices(): Promise<NormalizedCambrionixDevice[]> {
@@ -181,7 +181,6 @@ export class CambrionixEnricher {
             'deviceUdid',
             'device_udid',
             'ecid',
-            'id',
         ];
         const result: string[] = [];
         keys.forEach((key) => {

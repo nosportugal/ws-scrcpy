@@ -83,6 +83,8 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             enrichmentState: 'idle',
             enrichmentMessage: 'Device offline',
         };
+        this.enrichInFlightByUdid.delete(udid);
+        this.lastEnrichByUdid.delete(udid);
         this.emit('device', descriptor);
     };
 
