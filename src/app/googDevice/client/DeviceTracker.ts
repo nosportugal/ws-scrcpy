@@ -197,14 +197,6 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         return `${freqMHz} MHz`;
     }
 
-    private static getWifiBand(freqMHz: number): string {
-        if (freqMHz >= 6425) return 'WiFi 7';
-        if (freqMHz >= 5925) return 'WiFi 6E';
-        if (freqMHz >= 5000) return 'WiFi 5';
-        if (freqMHz >= 2412) return 'WiFi 4';
-        return `${freqMHz} MHz`;
-    }
-
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
