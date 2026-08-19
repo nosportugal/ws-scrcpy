@@ -18,6 +18,16 @@ adbServers:
 ## This allows remote adb clients to connect to THIS machine's ADB server
 adbListenAllInterfaces: true
 
+# Optional Cambrionix enrichment
+cambrionix:
+  enabled: false
+  baseUrl: http://127.0.0.1:9000
+  deviceListPath: /api/devices
+  timeoutMs: 2000
+  retryCount: 1
+  cacheTtlMs: 10000
+  pollIntervalMs: 5000
+
 # HTTP[s] servers configuration
 server:
   - secure: false

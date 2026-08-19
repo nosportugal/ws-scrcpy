@@ -15,6 +15,7 @@ import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
 import { Tool } from '../../client/Tool';
+import { DeviceDetails } from '../../../types/DeviceDetails';
 
 type Field = keyof GoogDeviceDescriptor | ((descriptor: GoogDeviceDescriptor) => string);
 type DescriptionColumn = { title: string; field: Field };
@@ -175,6 +176,14 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     }
 
     private static getCommercialName(device: GoogDeviceDescriptor): string {
+        const detailsMarket = device.details?.marketName?.trim();
+        const detailsModel = device.details?.modelCode?.trim();
+        if (detailsMarket && detailsMarket.toLowerCase() !== 'unknown') {
+            if (detailsModel && !detailsMarket.includes(detailsModel)) {
+                return `${detailsMarket} (${detailsModel})`;
+            }
+            return detailsMarket;
+        }
         const manufacturer = device['ro.product.manufacturer'].toLowerCase();
         if (manufacturer === 'samsung') {
             const marketingName = device['ro.config.marketing_name'];
@@ -192,6 +201,61 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         );
     }
 
+    private static getDetailsStateLabel(details?: DeviceDetails): string {
+        if (!details) {
+            return 'Unknown';
+        }
+        switch (details.enrichmentState) {
+            case 'loading':
+                return 'Loading';
+            case 'ready':
+                return details.source === 'merged' ? 'Enriched' : 'Ready';
+            case 'unavailable':
+                return 'Unavailable';
+            case 'error':
+                return 'Error';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    private static buildDetailsEntries(device: GoogDeviceDescriptor): Array<{ label: string; value: string }> {
+        const details = device.details;
+        const unknown = 'Unknown';
+        return [
+            { label: 'Market name', value: details?.marketName || DeviceTracker.getCommercialName(device) || unknown },
+            { label: 'Model code', value: details?.modelCode || device['ro.product.model'] || unknown },
+            { label: 'Manufacturer', value: device['ro.product.manufacturer'] || unknown },
+            { label: 'USB hub', value: details?.usbHub || unknown },
+            { label: 'USB port', value: details?.usbPort || unknown },
+            { label: 'Power status', value: details?.powerStatus || unknown },
+            { label: 'Health status', value: details?.healthStatus || unknown },
+            { label: 'Connection', value: details?.connectionStatus || device.state || unknown },
+            { label: 'Enrichment', value: DeviceTracker.getDetailsStateLabel(details) },
+            { label: 'Source', value: details?.source || 'native' },
+            { label: 'Message', value: details?.enrichmentMessage || unknown },
+        ];
+    }
+
+    private static createDetailsPanel(device: GoogDeviceDescriptor): HTMLElement {
+        const panel = document.createElement('div');
+        panel.className = 'device-details-popover';
+        DeviceTracker.buildDetailsEntries(device).forEach((entry) => {
+            const row = document.createElement('div');
+            row.className = 'device-details-row';
+            const label = document.createElement('span');
+            label.className = 'device-details-label';
+            label.textContent = `${entry.label}:`;
+            const value = document.createElement('span');
+            value.className = 'device-details-value';
+            value.textContent = entry.value;
+            row.appendChild(label);
+            row.appendChild(value);
+            panel.appendChild(row);
+        });
+        return panel;
+    }
+
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
@@ -205,6 +269,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const commercialName = DeviceTracker.getCommercialName(device);
         const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
         const nameTitle = commercialName !== technicalName ? technicalName : '';
+        const detailsState = DeviceTracker.getDetailsStateLabel(device.details);
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
@@ -214,10 +279,21 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     <div class="release-version">Android ${device['ro.build.version.release']}</div>
                     <div class="sdk-version">API ${device['ro.build.version.sdk']}</div>
                 </div>
+                <button class="action-button device-details-button" type="button" title="Show device details">Details (${detailsState})</button>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
+            <div class="device-details-container"></div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
+        const detailsButton = row.querySelector('button.device-details-button');
+        const detailsContainer = row.querySelector('.device-details-container');
+        if (detailsButton && detailsContainer) {
+            const detailsPanel = DeviceTracker.createDetailsPanel(device);
+            detailsContainer.appendChild(detailsPanel);
+            detailsButton.addEventListener('click', () => {
+                detailsPanel.classList.toggle('open');
+            });
+        }
         if (remoteHost) {
             const header = row.querySelector('.device-header');
             if (header) {

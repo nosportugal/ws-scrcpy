@@ -169,6 +169,8 @@ Configuration file format: [Configuration.d.ts](/src/types/Configuration.d.ts).
 
 Configuration file example: [config.example.yaml](/config.example.yaml).
 
+Optional Cambrionix enrichment can be configured in `cambrionix` section (`enabled`, `baseUrl`, `deviceListPath`, timeout/retry/cache/poll settings) to expose extra device details such as market name and USB hub/port metadata.
+
 ## Known issues
 
 * The server on the Android Emulator listens on the internal interface and not

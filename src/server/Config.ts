@@ -1,7 +1,13 @@
 import * as process from 'process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AdbServerItem, Configuration, HostItem, ServerItem } from '../types/Configuration';
+import {
+    AdbServerItem,
+    CambrionixConfiguration,
+    Configuration,
+    HostItem,
+    ServerItem,
+} from '../types/Configuration';
 import { EnvName } from './EnvName';
 import YAML from 'yaml';
 
@@ -12,6 +18,8 @@ const JSON_RE = /^.+\.(json|js)$/i;
 
 type FullConfiguration = Omit<Required<Configuration>, 'adbHost' | 'adbPort'> &
     Pick<Configuration, 'adbHost' | 'adbPort'>;
+
+type FullCambrionixConfiguration = Required<CambrionixConfiguration>;
 
 export class Config {
     private static instance?: Config;
@@ -49,9 +57,19 @@ export class Config {
                 { host: '127.0.0.1', port: 5037 },
                 { host: '192.168.200.37', port: 5037, name: '3P-Appium-iOS.local' },
             ],
+            cambrionix: {
+                enabled: false,
+                baseUrl: '',
+                deviceListPath: '/api/devices',
+                timeoutMs: 2000,
+                retryCount: 1,
+                cacheTtlMs: 10000,
+                pollIntervalMs: 5000,
+            },
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
+        merged.cambrionix = Object.assign({}, defaultConfig.cambrionix, userConfig.cambrionix);
         return merged;
     }
     private static parseServerItem(config: Partial<ServerItem> = {}): ServerItem {
@@ -186,5 +204,9 @@ export class Config {
             return [{ host: this.fullConfig.adbHost, port: this.fullConfig.adbPort || 5037 }];
         }
         return [{ host: '127.0.0.1', port: 5037 }];
+    }
+
+    public get cambrionix(): FullCambrionixConfiguration {
+        return this.fullConfig.cambrionix as FullCambrionixConfiguration;
     }
 }
