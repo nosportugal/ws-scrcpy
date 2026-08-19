@@ -7,6 +7,10 @@ export default interface GoogDeviceDescriptor extends BaseDeviceDescriptor {
     'ro.product.cpu.abi': string;
     'ro.product.manufacturer': string;
     'ro.product.model': string;
+    'ro.product.marketname': string;
+    'ro.config.marketing_name': string;
+    'ro.vendor.oplus.market.name': string;
+    'ro.hardware.wifi': string;
     'wifi.interface': string;
     interfaces: NetInterface[];
     pid: number;

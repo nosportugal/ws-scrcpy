@@ -87,7 +87,7 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     protected constructor(params: ParamsDeviceTracker, protected readonly directUrl: string) {
         super(params);
         this.elementId = `tracker_instance${++BaseDeviceTracker.instanceId}`;
-        this.trackerName = `⏳ A ligar a ${params.hostname ?? location.hostname}…`;
+        this.trackerName = params.hostname ?? location.hostname;
         this.setBodyClass('list');
         this.setTitle();
     }
@@ -191,6 +191,17 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         switch (message.type) {
             case BaseDeviceTracker.ACTION_LIST: {
                 const evt = message.data as DeviceTrackerEventList<DD>;
+                // Remove any stale ccBlocks for the same tracker name but a different id
+                // (happens on server restart, which generates a new uptime-based id)
+                for (const [staleId, staleBlock] of this.ccBlocks) {
+                    if (staleId !== evt.id && staleBlock.trackerName === evt.name) {
+                        const el = document.getElementById(staleBlock.elementId);
+                        if (el) {
+                            el.remove();
+                        }
+                        this.ccBlocks.delete(staleId);
+                    }
+                }
                 this.getOrCreateCcBlock(evt.id, evt.name).descriptors = evt.list;
                 this.setIdAndHostName(evt.id, evt.name);
                 this.buildDeviceTable();

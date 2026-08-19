@@ -60,6 +60,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
             'ro.build.version.sdk': '',
             'ro.product.manufacturer': '',
             'ro.product.model': '',
+            'ro.product.marketname': '',
+            'ro.config.marketing_name': '',
+            'ro.vendor.oplus.market.name': '',
+            'ro.hardware.wifi': '',
             'ro.product.cpu.abi': '',
             'last.update.timestamp': 0,
         };
@@ -183,6 +187,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const ipv4 = ipAndMask.split('/')[0];
             list.push({ name, ipv4 });
         });
+
         return list.sort(this.interfacesSort);
     }
 
@@ -339,7 +344,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 }
                 return true;
             });
-            const netIntPromise = this.updateInterfaces().then((interfaces) => {
+            // Chain interface update after props so that wifi.interface is already set
+            const netIntPromise = propsPromise.then(() => this.updateInterfaces()).then((interfaces) => {
                 return !!interfaces.length;
             });
             const adbBusyPromise = this.detectAdbBusy().then((isBusy) => {
@@ -436,7 +442,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 changed = true;
             } else {
                 old.forEach((value, idx) => {
-                    if (value.name !== interfaces[idx].name || value.ipv4 !== interfaces[idx].ipv4) {
+                    if (
+                        value.name !== interfaces[idx].name ||
+                        value.ipv4 !== interfaces[idx].ipv4
+                    ) {
                         changed = true;
                     }
                 });

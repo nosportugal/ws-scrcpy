@@ -50,3 +50,25 @@ remoteHostList:
     secure: true
     hostname: third-mobile-stand.example.com
     port: 8443
+
+# Cambrionix Hub Manager enrichment (optional)
+# List up to N Cambrionix sources.  Each source is polled independently.
+# If a source is unreachable, the other source(s) continue working normally.
+# Remove or set enable: false to disable a source without removing its config.
+cambrionixSources:
+  - name: hub-a                          # label used in logs/metrics
+    enable: true
+    baseUrl: http://10.0.0.10:9595       # Hub Manager base URL
+    path: /api/v1/port                   # API path (default: /api/v1/port)
+    timeoutMs: 5000                      # per-request timeout (ms)
+    retryDelayMs: 10000                  # delay before retry on error (ms)
+    cacheMs: 30000                       # cache TTL (ms)
+    pollMs: 20000                        # background poll interval (ms)
+  - name: hub-b
+    enable: true
+    baseUrl: http://10.0.0.11:9595
+    path: /api/v1/port
+    timeoutMs: 5000
+    retryDelayMs: 10000
+    cacheMs: 30000
+    pollMs: 20000

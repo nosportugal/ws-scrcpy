@@ -174,6 +174,24 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         return hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== location.hostname;
     }
 
+    private static getCommercialName(device: GoogDeviceDescriptor): string {
+        const manufacturer = device['ro.product.manufacturer'].toLowerCase();
+        if (manufacturer === 'samsung') {
+            const marketingName = device['ro.config.marketing_name'];
+            const model = device['ro.product.model'];
+            if (marketingName && model) {
+                return `${marketingName} (${model})`;
+            }
+            return marketingName || (model ? `Samsung ${model}` : 'Samsung');
+        }
+        return (
+            device['ro.product.marketname'] ||
+            device['ro.config.marketing_name'] ||
+            device['ro.vendor.oplus.market.name'] ||
+            `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim()
+        );
+    }
+
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
@@ -184,14 +202,17 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const servicesId = `device_services_${fullName}`;
         const remoteHost =
             DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? (this.params.hostname ?? '') : '';
+        const commercialName = DeviceTracker.getCommercialName(device);
+        const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
+        const nameTitle = commercialName !== technicalName ? technicalName : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
-                <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
+                <div class="device-name" title="${nameTitle}">${commercialName}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
-                    <div class="release-version">${device['ro.build.version.release']}</div>
-                    <div class="sdk-version">${device['ro.build.version.sdk']}</div>
+                    <div class="release-version">Android ${device['ro.build.version.release']}</div>
+                    <div class="sdk-version">API ${device['ro.build.version.sdk']}</div>
                 </div>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
@@ -289,7 +310,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 stateSpan.classList.add('session-state');
                 if (isBusy) {
                     stateSpan.classList.add('busy');
-                    stateSpan.innerText = '🔴 BUSY';
+                    stateSpan.innerText = 'BUSY';
                     if (device.busyReason === 'ws+adb') {
                         stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
                     } else if (device.busyReason === 'ws') {
@@ -299,7 +320,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     }
                 } else if (isActive) {
                     stateSpan.classList.add('idle');
-                    stateSpan.innerText = '🟢 IDLE';
+                    stateSpan.innerText = 'IDLE';
                 } else {
                     const timestamp = device['last.update.timestamp'];
                     stateSpan.classList.add('offline');
@@ -333,7 +354,8 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     };
                     const url = DeviceTracker.createUrl(params).toString();
                     const optionElement = DeviceTracker.createInterfaceOption(value.name, url);
-                    optionElement.innerText = `${value.name}: ${value.ipv4}`;
+                    const label = `${value.name}: ${value.ipv4}`;
+                    optionElement.innerText = label;
                     selectElement.appendChild(optionElement);
                     if (lastSelected) {
                         if (lastSelected === value.name || !selectedInterfaceName) {

@@ -261,7 +261,6 @@ body.list #device_list_menu {
     display: none;
 }
 
-#devices .device-list div.desc-block.stream,
 #devices .device-list div.desc-block.server_pid,
 #devices .device-list div.desc-block.net_interface {
     border: 1px solid var(--device-border-color);
@@ -271,15 +270,31 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.device div.desc-block.stream button.action-button {
-    color: var(--button-text-color);
-}
-
-#devices .device-list div.desc-block.stream > a {
-    padding: 2px 8px;
     display: inline-flex;
     align-items: center;
     font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: .3em;
+    color: #fff;
+    background-color: #2980b9;
+    border: none;
+    cursor: pointer;
+}
+
+#devices .device-list div.desc-block.stream > a {
+    padding: 4px 14px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 90%;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-decoration: none;
+}
+
+#devices .device-list .device.active div.desc-block.stream > a:hover {
+    background-color: var(--device-list-hover-color);
 }
 
 #devices .device-list div.desc-block button {
@@ -320,8 +335,27 @@ body.list #device_list_menu {
     text-decoration: none;
 }
 
+/* Launch link badge */
+#devices .device-list div.desc-block a.link-stream {
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: .3em;
+    color: #fff;
+    background-color: #2980b9;
+    text-decoration: none;
+}
+
+#devices .device-list div.desc-block a.link-stream:visited {
+    color: #fff;
+}
+
 /* State badge */
 #devices .device-list .session-state {
+    display: inline-flex;
     align-items: center;
     border-left: 1px solid var(--device-border-color);
     font-size: 85%;
