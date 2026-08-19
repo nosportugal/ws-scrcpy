@@ -27,7 +27,14 @@ export interface DeviceEvents {
 export class Device extends TypedEmitter<DeviceEvents> {
     private static readonly INITIAL_UPDATE_TIMEOUT = 1500;
     private static readonly MAX_UPDATES_COUNT = 7;
-    private static readonly ADB_BUSY_PROCESS_NAMES = ['uiautomator', 'uiautomator2', 'atx-agent', 'minicap', 'minitouch', 'frida-server'];
+    private static readonly ADB_BUSY_PROCESS_NAMES = [
+        'uiautomator',
+        'uiautomator2',
+        'atx-agent',
+        'minicap',
+        'minitouch',
+        'frida-server',
+    ];
     private connected = true;
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
@@ -354,9 +361,11 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 return true;
             });
             // Chain interface update after props so that wifi.interface is already set
-            const netIntPromise = propsPromise.then(() => this.updateInterfaces()).then((interfaces) => {
-                return !!interfaces.length;
-            });
+            const netIntPromise = propsPromise
+                .then(() => this.updateInterfaces())
+                .then((interfaces) => {
+                    return !!interfaces.length;
+                });
             const adbBusyPromise = this.detectAdbBusy().then((isBusy) => {
                 if (this.descriptor.adbBusy !== isBusy) {
                     this.descriptor.adbBusy = isBusy;
@@ -410,7 +419,11 @@ export class Device extends TypedEmitter<DeviceEvents> {
         const existing = this.descriptor.details;
         const state = existing?.enrichmentState === 'ready' ? 'ready' : existing?.enrichmentState || 'loading';
         const message =
-            state === 'ready' ? existing?.enrichmentMessage || '' : this.connected ? 'Awaiting Cambrionix enrichment' : 'Device offline';
+            state === 'ready'
+                ? existing?.enrichmentMessage || ''
+                : this.connected
+                ? 'Awaiting Cambrionix enrichment'
+                : 'Device offline';
         this.descriptor.details = {
             ...this.createNativeDetails(state, message),
             usbHub: existing?.usbHub || this.unknownValue(),
@@ -458,7 +471,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
             return;
         }
         const now = Date.now();
-        if (this.cambrionixRequestInFlight || now - this.lastCambrionixRequestAt < this.cambrionixEnricher.getPollIntervalMs()) {
+        if (
+            this.cambrionixRequestInFlight ||
+            now - this.lastCambrionixRequestAt < this.cambrionixEnricher.getPollIntervalMs()
+        ) {
             return;
         }
         this.lastCambrionixRequestAt = now;
@@ -560,10 +576,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 changed = true;
             } else {
                 old.forEach((value, idx) => {
-                    if (
-                        value.name !== interfaces[idx].name ||
-                        value.ipv4 !== interfaces[idx].ipv4
-                    ) {
+                    if (value.name !== interfaces[idx].name || value.ipv4 !== interfaces[idx].ipv4) {
                         changed = true;
                     }
                 });

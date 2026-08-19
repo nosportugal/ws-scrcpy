@@ -107,7 +107,9 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
                 <div class="device-version">
                     <div class="release-version">${device.version}</div>
                 </div>
-                <button class="action-button device-details-button" type="button" title="Show device details">Details (${detailsState})</button>
+                <button class="action-button device-details-button" type="button" title="Show device details">
+                    Details (${detailsState})
+                </button>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
             <div class="device-details-container"></div>

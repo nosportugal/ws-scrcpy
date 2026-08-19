@@ -264,8 +264,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const isActive = device.state === DeviceState.DEVICE;
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
-        const remoteHost =
-            DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? (this.params.hostname ?? '') : '';
+        const remoteHost = DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? this.params.hostname ?? '' : '';
         const commercialName = DeviceTracker.getCommercialName(device);
         const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
         const nameTitle = commercialName !== technicalName ? technicalName : '';
@@ -279,7 +278,9 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     <div class="release-version">Android ${device['ro.build.version.release']}</div>
                     <div class="sdk-version">API ${device['ro.build.version.sdk']}</div>
                 </div>
-                <button class="action-button device-details-button" type="button" title="Show device details">Details (${detailsState})</button>
+                <button class="action-button device-details-button" type="button" title="Show device details">
+                    Details (${detailsState})
+                </button>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
             <div class="device-details-container"></div>
@@ -388,9 +389,13 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     stateSpan.classList.add('busy');
                     stateSpan.innerText = 'BUSY';
                     if (device.busyReason === 'ws+adb') {
-                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
+                        stateSpan.title = `Device is in use via ws-scrcpy (${
+                            device.scrcpyConnectionCount || 0
+                        } active) and ADB automation`;
                     } else if (device.busyReason === 'ws') {
-                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active)`;
+                        stateSpan.title = `Device is in use via ws-scrcpy (${
+                            device.scrcpyConnectionCount || 0
+                        } active)`;
                     } else if (device.busyReason === 'adb') {
                         stateSpan.title = 'Device is in use via ADB automation';
                     }
