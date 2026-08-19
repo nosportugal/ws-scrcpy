@@ -1,7 +1,13 @@
 import * as process from 'process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AdbServerItem, CambrionixConfiguration, Configuration, HostItem, ServerItem } from '../types/Configuration';
+import {
+    AdbServerItem,
+    CambrionixConfiguration,
+    Configuration,
+    HostItem,
+    ServerItem,
+} from '../types/Configuration';
 import { EnvName } from './EnvName';
 import YAML from 'yaml';
 

@@ -121,9 +121,7 @@ export class CambrionixEnricher {
         const candidates = this.extractDeviceCandidates(payload);
         const devices: NormalizedCambrionixDevice[] = [];
         candidates.forEach((candidate) => {
-            const identifiers = this.extractIdentifiers(candidate)
-                .map(this.normalize)
-                .filter((value) => !!value);
+            const identifiers = this.extractIdentifiers(candidate).map(this.normalize).filter((value) => !!value);
             if (!identifiers.length) {
                 return;
             }
@@ -216,7 +214,7 @@ export class CambrionixEnricher {
         return typeof value === 'object' && value !== null;
     };
 
-    private normalize = (value: string): string => {
+    private normalize(value: string): string {
         return value.trim().toLowerCase();
-    };
+    }
 }
