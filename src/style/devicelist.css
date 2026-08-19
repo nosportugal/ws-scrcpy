@@ -261,7 +261,6 @@ body.list #device_list_menu {
     display: none;
 }
 
-#devices .device-list div.desc-block.stream,
 #devices .device-list div.desc-block.server_pid,
 #devices .device-list div.desc-block.net_interface {
     border: 1px solid var(--device-border-color);
@@ -271,7 +270,17 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.device div.desc-block.stream button.action-button {
-    color: var(--button-text-color);
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: .3em;
+    color: #fff;
+    background-color: #2980b9;
+    border: none;
+    cursor: pointer;
 }
 
 #devices .device-list div.desc-block.stream > a {
