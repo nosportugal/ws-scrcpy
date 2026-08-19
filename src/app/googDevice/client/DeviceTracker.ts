@@ -228,17 +228,6 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 header.appendChild(badge);
             }
         }
-        if (device.cambrionix) {
-            const header = row.querySelector('.device-header');
-            if (header) {
-                const cambrionix = device.cambrionix;
-                const badge = document.createElement('span');
-                badge.className = 'device-cambrionix';
-                badge.title = `Cambrionix hub: ${cambrionix.source} | Port: ${cambrionix.port} | Power: ${cambrionix.powerState} | Connection: ${cambrionix.connectionState}`;
-                badge.textContent = `🔌 ${cambrionix.source} p${cambrionix.port}`;
-                header.appendChild(badge);
-            }
-        }
         const services = row.getElementById(servicesId);
         if (!services) {
             return;

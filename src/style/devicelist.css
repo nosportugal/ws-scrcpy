@@ -252,17 +252,6 @@ body.list #device_list_menu {
     white-space: nowrap;
 }
 
-#devices .device-cambrionix {
-    font-size: 75%;
-    color: var(--url-color);
-    background-color: rgba(0,0,0,0.06);
-    border-radius: 4px;
-    padding: 1px 6px;
-    margin-left: 4px;
-    white-space: nowrap;
-    cursor: help;
-}
-
 #devices .device-list div.desc-block {
     margin: .3em;
     display: inline-flex;

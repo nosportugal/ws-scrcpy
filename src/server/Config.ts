@@ -1,7 +1,7 @@
 import * as process from 'process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AdbServerItem, CambrionixSourceConfig, Configuration, HostItem, ServerItem } from '../types/Configuration';
+import { AdbServerItem, Configuration, HostItem, ServerItem } from '../types/Configuration';
 import { EnvName } from './EnvName';
 import YAML from 'yaml';
 
@@ -48,28 +48,6 @@ export class Config {
             adbServers: [
                 { host: '127.0.0.1', port: 5037 },
                 { host: '192.168.200.37', port: 5037, name: '3P-Appium-iOS.local' },
-            ],
-            cambrionixSources: [
-                {
-                    name: 'hub-a',
-                    enable: true,
-                    baseUrl: 'http://192.168.200.59:9595',
-                    path: '/api/v1/port',
-                    timeoutMs: 5000,
-                    retryDelayMs: 10000,
-                    cacheMs: 30000,
-                    pollMs: 20000,
-                },
-                {
-                    name: 'hub-b',
-                    enable: true,
-                    baseUrl: 'http://192.168.200.37:9595',
-                    path: '/api/v1/port',
-                    timeoutMs: 5000,
-                    retryDelayMs: 10000,
-                    cacheMs: 30000,
-                    pollMs: 20000,
-                },
             ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
@@ -208,9 +186,5 @@ export class Config {
             return [{ host: this.fullConfig.adbHost, port: this.fullConfig.adbPort || 5037 }];
         }
         return [{ host: '127.0.0.1', port: 5037 }];
-    }
-
-    public get cambrionixSources(): CambrionixSourceConfig[] {
-        return this.fullConfig.cambrionixSources || [];
     }
 }

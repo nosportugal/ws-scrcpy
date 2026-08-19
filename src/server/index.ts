@@ -12,7 +12,6 @@ import { MwFactory } from './mw/Mw';
 import { WebsocketProxy } from './mw/WebsocketProxy';
 import { HostTracker } from './mw/HostTracker';
 import { WebsocketMultiplexer } from './mw/WebsocketMultiplexer';
-import { CambrionixEnricher } from './services/CambrionixEnricher';
 
 const servicesToStart: ServiceClass[] = [HttpServer, WebSocketServer];
 
@@ -26,12 +25,6 @@ const runningServices: Service[] = [];
 const loadPlatformModulesPromises: Promise<void>[] = [];
 
 const config = Config.getInstance();
-
-// Initialise Cambrionix enricher (no-op when no sources are configured).
-const cambrionixEnricher = CambrionixEnricher.getInstance(config.cambrionixSources);
-if (cambrionixEnricher.isActive()) {
-    cambrionixEnricher.start();
-}
 
 function startAdbServerAllInterfaces(port?: number): void {
     // If ADB is already listening on this port, keep it as-is.
@@ -218,5 +211,4 @@ function exit(signal: string) {
         console.log(`Stopping ${serviceName} ...`);
         service.release();
     });
-    cambrionixEnricher.stop();
 }
