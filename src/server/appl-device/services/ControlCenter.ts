@@ -7,6 +7,7 @@ import ApplDeviceDescriptor from '../../../types/ApplDeviceDescriptor';
 import { IOSDeviceLib } from 'ios-device-lib';
 import { DeviceState } from '../../../common/DeviceState';
 import { ProductType } from '../../../common/ProductType';
+import { CambrionixEnricher } from '../../services/CambrionixEnricher';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
@@ -40,7 +41,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         const productType = device.productType || '<NoModel>';
         const version = device.productVersion || '<NoVersion>';
         const model = ProductType.getModel(productType);
-        const descriptor = {
+        const descriptor: ApplDeviceDescriptor = {
             udid,
             name,
             model,
@@ -48,6 +49,10 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             state,
             'last.update.timestamp': Date.now(),
         };
+        const enrichment = CambrionixEnricher.getInstance().enrich(udid);
+        if (enrichment) {
+            descriptor.cambrionix = enrichment;
+        }
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
     };

@@ -12,6 +12,7 @@ import * as os from 'os';
 import * as crypto from 'crypto';
 import { DeviceState } from '../../../common/DeviceState';
 import DeviceLock from '../../device-lock';
+import { CambrionixEnricher } from '../../services/CambrionixEnricher';
 
 export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> implements Service {
     private static readonly defaultWaitAfterError = 1000;
@@ -93,6 +94,10 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     private onDeviceUpdate = (device: Device): void => {
         const { udid, descriptor } = device;
         this.applyBusyState(udid, descriptor);
+        const enrichment = CambrionixEnricher.getInstance().enrich(udid);
+        if (enrichment) {
+            descriptor.cambrionix = enrichment;
+        }
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
     };
