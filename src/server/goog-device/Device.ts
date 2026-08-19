@@ -190,10 +190,11 @@ export class Device extends TypedEmitter<DeviceEvents> {
 
         const wifiIface = this.descriptor['wifi.interface'];
         if (wifiIface) {
-            const freqMHz = await this.getWifiFrequencyMHz(wifiIface);
+            const wifiInfo = await this.getWifiInfo(wifiIface);
             list.forEach((iface) => {
-                if (iface.name === wifiIface && freqMHz !== undefined) {
-                    iface.wifiFreqMHz = freqMHz;
+                if (iface.name === wifiIface && wifiInfo !== undefined) {
+                    iface.wifiFreqMHz = wifiInfo.freqMHz;
+                    iface.wifiGeneration = wifiInfo.generation;
                 }
             });
         }
@@ -201,27 +202,47 @@ export class Device extends TypedEmitter<DeviceEvents> {
         return list.sort(this.interfacesSort);
     }
 
-    private async getWifiFrequencyMHz(iface: string): Promise<number | undefined> {
+    private async getWifiInfo(iface: string): Promise<{ freqMHz: number; generation: number | '6E' } | undefined> {
         try {
             const iwOutput = await this.runShellCommandAdbKit(`iw dev ${iface} link 2>/dev/null`);
             const freqMatch = iwOutput.match(/freq:\s*(\d+)/i);
             if (freqMatch) {
-                return parseInt(freqMatch[1], 10);
+                const freqMHz = parseInt(freqMatch[1], 10);
+                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, iwOutput);
+                return { freqMHz, generation };
             }
             const iwconfigOutput = await this.runShellCommandAdbKit(`iwconfig ${iface} 2>/dev/null`);
             const freqMatchIw = iwconfigOutput.match(/Frequency[=:](\d+(?:\.\d+)?)\s*([GMk]?)Hz/i);
             if (freqMatchIw) {
                 const value = parseFloat(freqMatchIw[1]);
                 const unit = freqMatchIw[2].toUpperCase();
-                if (unit === 'G') return Math.round(value * 1000);
-                if (unit === 'K') return Math.round(value / 1000);
-                // 'M' or no unit prefix — treat as MHz
-                return Math.round(value);
+                let freqMHz: number;
+                if (unit === 'G') freqMHz = Math.round(value * 1000);
+                else if (unit === 'K') freqMHz = Math.round(value / 1000);
+                else freqMHz = Math.round(value);
+                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, iwconfigOutput);
+                return { freqMHz, generation };
             }
         } catch {
             // Best effort; not all devices support iw/iwconfig.
         }
         return undefined;
+    }
+
+    private static wifiGenerationFromFreqAndProtocol(freqMHz: number, iwOutput: string): number | '6E' {
+        // WiFi 7 (EHT) — 6 GHz high band (≥6425 MHz) or EHT capability string
+        if (freqMHz >= 6425 || /\beht\b/i.test(iwOutput)) return 7;
+        // WiFi 6E — 6 GHz low band (5925–6424 MHz)
+        if (freqMHz >= 5925) return '6E';
+        // HE (High Efficiency) indicates WiFi 6 on 2.4/5 GHz
+        if (/\bhe\b/i.test(iwOutput)) return 6;
+        // VHT (Very High Throughput) indicates WiFi 5, 5 GHz only
+        if (/\bvht\b/i.test(iwOutput)) return 5;
+        // HT (High Throughput) indicates WiFi 4
+        if (/\bht\b/i.test(iwOutput)) return 4;
+        // Fallback: guess from frequency
+        if (freqMHz >= 5000) return 5;
+        return 4;
     }
 
     private async pidOf(processName: string): Promise<number[]> {

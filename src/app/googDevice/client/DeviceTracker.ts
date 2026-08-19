@@ -183,6 +183,20 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         );
     }
 
+    private static getWifiLabel(wifiInterface: { wifiFreqMHz?: number; wifiGeneration?: number | '6E' } | undefined): string {
+        if (!wifiInterface?.wifiFreqMHz) return '';
+        if (wifiInterface.wifiGeneration !== undefined) {
+            return `WiFi ${wifiInterface.wifiGeneration}`;
+        }
+        // Fallback to frequency-based guess when generation is not available
+        const freqMHz = wifiInterface.wifiFreqMHz;
+        if (freqMHz >= 6425) return 'WiFi 7';
+        if (freqMHz >= 5925) return 'WiFi 6E';
+        if (freqMHz >= 5000) return 'WiFi 5';
+        if (freqMHz >= 2412) return 'WiFi 4';
+        return `${freqMHz} MHz`;
+    }
+
     private static getWifiBand(freqMHz: number): string {
         if (freqMHz >= 6425) return 'WiFi 7';
         if (freqMHz >= 5925) return 'WiFi 6E';
@@ -206,7 +220,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const nameTitle = commercialName !== technicalName ? technicalName : '';
         const wifiIface = device['wifi.interface'];
         const wifiInterface = wifiIface ? device.interfaces.find((i) => i.name === wifiIface) : undefined;
-        const wifiBandText = wifiInterface?.wifiFreqMHz ? DeviceTracker.getWifiBand(wifiInterface.wifiFreqMHz) : '';
+        const wifiBandText = DeviceTracker.getWifiLabel(wifiInterface);
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
@@ -360,7 +374,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     const isWifi = device['wifi.interface'] === value.name;
                     let label = `${value.name}: ${value.ipv4}`;
                     if (isWifi && value.wifiFreqMHz) {
-                        label += ` (${DeviceTracker.getWifiBand(value.wifiFreqMHz)})`;
+                        label += ` (${DeviceTracker.getWifiLabel(value)})`;
                     }
                     optionElement.innerText = label;
                     selectElement.appendChild(optionElement);
