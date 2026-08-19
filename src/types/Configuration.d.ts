@@ -43,16 +43,6 @@ export interface AdbServerItem {
     name?: string;
 }
 
-export interface CambrionixConfiguration {
-    enabled?: boolean;
-    baseUrl?: string;
-    deviceListPath?: string;
-    timeoutMs?: number;
-    retryCount?: number;
-    cacheTtlMs?: number;
-    pollIntervalMs?: number;
-}
-
 // The configuration file must contain a single object with this structure
 export interface Configuration {
     server?: ServerItem[];
@@ -65,5 +55,4 @@ export interface Configuration {
     adbPort?: number;
     adbListenAllInterfaces?: boolean;
     adbServers?: AdbServerItem[];
-    cambrionix?: CambrionixConfiguration;
 }

@@ -7,7 +7,6 @@ import { DeviceState } from '../../../common/DeviceState';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
 import { Tool } from '../../client/Tool';
-import { DeviceDetails } from '../../../types/DeviceDetails';
 
 export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never> {
     public static ACTION = ACTION.APPL_DEVICE_LIST;
@@ -38,67 +37,11 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         // do nothing;
     }
 
-    private static getDetailsStateLabel(details?: DeviceDetails): string {
-        if (!details) {
-            return 'Unknown';
-        }
-        switch (details.enrichmentState) {
-            case 'loading':
-                return 'Loading';
-            case 'ready':
-                return details.source === 'merged' ? 'Enriched' : 'Ready';
-            case 'unavailable':
-                return 'Unavailable';
-            case 'error':
-                return 'Error';
-            default:
-                return 'Unknown';
-        }
-    }
-
-    private static buildDetailsEntries(device: ApplDeviceDescriptor): Array<{ label: string; value: string }> {
-        const details = device.details;
-        const unknown = 'Unknown';
-        return [
-            { label: 'Market name', value: details?.marketName || device.name || unknown },
-            { label: 'Model code', value: details?.modelCode || device.model || unknown },
-            { label: 'iOS version', value: device.version || unknown },
-            { label: 'USB hub', value: details?.usbHub || unknown },
-            { label: 'USB port', value: details?.usbPort || unknown },
-            { label: 'Power status', value: details?.powerStatus || unknown },
-            { label: 'Health status', value: details?.healthStatus || unknown },
-            { label: 'Connection', value: details?.connectionStatus || device.state || unknown },
-            { label: 'Enrichment', value: DeviceTracker.getDetailsStateLabel(details) },
-            { label: 'Source', value: details?.source || 'native' },
-            { label: 'Message', value: details?.enrichmentMessage || unknown },
-        ];
-    }
-
-    private static createDetailsPanel(device: ApplDeviceDescriptor): HTMLElement {
-        const panel = document.createElement('div');
-        panel.className = 'device-details-popover';
-        DeviceTracker.buildDetailsEntries(device).forEach((entry) => {
-            const row = document.createElement('div');
-            row.className = 'device-details-row';
-            const label = document.createElement('span');
-            label.className = 'device-details-label';
-            label.textContent = `${entry.label}:`;
-            const value = document.createElement('span');
-            value.className = 'device-details-value';
-            value.textContent = entry.value;
-            row.appendChild(label);
-            row.appendChild(value);
-            panel.appendChild(row);
-        });
-        return panel;
-    }
-
     protected buildDeviceRow(tbody: Element, device: ApplDeviceDescriptor): void {
         const blockClass = 'desc-block';
         const fullName = `${this.id}_${Util.escapeUdid(device.udid)}`;
         const isActive = device.state === DeviceState.CONNECTED;
         const servicesId = `device_services_${fullName}`;
-        const detailsState = DeviceTracker.getDetailsStateLabel(device.details);
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <div class="device-name">"${device.name}"</div>
@@ -107,21 +50,10 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
                 <div class="device-version">
                     <div class="release-version">${device.version}</div>
                 </div>
-                <button class="action-button device-details-button" type="button" title="Show device details">Details (${detailsState})</button>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
-            <div class="device-details-container"></div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
-        const detailsButton = row.querySelector('button.device-details-button');
-        const detailsContainer = row.querySelector('.device-details-container');
-        if (detailsButton && detailsContainer) {
-            const detailsPanel = DeviceTracker.createDetailsPanel(device);
-            detailsContainer.appendChild(detailsPanel);
-            detailsButton.addEventListener('click', () => {
-                detailsPanel.classList.toggle('open');
-            });
-        }
         const services = row.getElementById(servicesId);
         if (!services) {
             return;

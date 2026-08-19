@@ -7,8 +7,6 @@ import ApplDeviceDescriptor from '../../../types/ApplDeviceDescriptor';
 import { IOSDeviceLib } from 'ios-device-lib';
 import { DeviceState } from '../../../common/DeviceState';
 import { ProductType } from '../../../common/ProductType';
-import { CambrionixEnricher } from '../../device-details/CambrionixEnricher';
-import { DeviceDetails } from '../../../types/DeviceDetails';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
@@ -16,9 +14,6 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private initialized = false;
     private tracker?: IOSDeviceLib.IOSDeviceLib;
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
-    private readonly cambrionixEnricher = CambrionixEnricher.getInstance();
-    private readonly enrichInFlightByUdid: Map<string, boolean> = new Map();
-    private readonly lastEnrichByUdid: Map<string, number> = new Map();
     private readonly id: string;
 
     protected constructor() {
@@ -52,11 +47,9 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             version,
             state,
             'last.update.timestamp': Date.now(),
-            details: this.createNativeDetails(name, model, state),
         };
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
-        this.refreshEnrichedDetails(descriptor);
     };
 
     private onDeviceLost = (device: IOSDeviceLib.IDeviceActionInfo): void => {
@@ -67,11 +60,6 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             return;
         }
         descriptor.state = DeviceState.DISCONNECTED;
-        descriptor.details = {
-            ...this.createNativeDetails(descriptor.name, descriptor.model, descriptor.state),
-            enrichmentState: 'idle',
-            enrichmentMessage: 'Device offline',
-        };
         this.emit('device', descriptor);
     };
 
@@ -134,79 +122,5 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             default:
                 throw new Error(`Unsupported command: "${type}"`);
         }
-    }
-
-    private createNativeDetails(name: string, model: string, state: string): DeviceDetails {
-        return {
-            marketName: name || 'Unknown',
-            modelCode: model || 'Unknown',
-            usbHub: 'Unknown',
-            usbPort: 'Unknown',
-            powerStatus: 'Unknown',
-            healthStatus: 'Unknown',
-            connectionStatus: state || 'Unknown',
-            source: 'native',
-            enrichmentState: this.cambrionixEnricher.isEnabled() ? 'loading' : 'idle',
-            enrichmentMessage: this.cambrionixEnricher.isEnabled()
-                ? 'Awaiting Cambrionix enrichment'
-                : 'Cambrionix disabled',
-            updatedAt: Date.now(),
-        };
-    }
-
-    private refreshEnrichedDetails(descriptor: ApplDeviceDescriptor): void {
-        if (!this.cambrionixEnricher.isEnabled()) {
-            return;
-        }
-        const udid = descriptor.udid;
-        const now = Date.now();
-        const last = this.lastEnrichByUdid.get(udid) || 0;
-        if (this.enrichInFlightByUdid.get(udid) || now - last < this.cambrionixEnricher.getPollIntervalMs()) {
-            return;
-        }
-        this.lastEnrichByUdid.set(udid, now);
-        this.enrichInFlightByUdid.set(udid, true);
-        this.cambrionixEnricher
-            .enrichByIdentifier(udid)
-            .then((cambrionixDetails) => {
-                const current = this.descriptors.get(udid);
-                if (!current) {
-                    return;
-                }
-                const native = this.createNativeDetails(current.name, current.model, current.state);
-                if (!cambrionixDetails) {
-                    current.details = {
-                        ...native,
-                        enrichmentState: 'unavailable',
-                        enrichmentMessage: 'Cambrionix details not found',
-                    };
-                } else {
-                    current.details = {
-                        ...native,
-                        ...cambrionixDetails,
-                        source: 'merged',
-                        enrichmentState: 'ready',
-                        enrichmentMessage: 'Enriched by Cambrionix',
-                        updatedAt: Date.now(),
-                    };
-                }
-                this.emit('device', current);
-            })
-            .catch((error: Error) => {
-                const current = this.descriptors.get(udid);
-                if (!current) {
-                    return;
-                }
-                current.details = {
-                    ...this.createNativeDetails(current.name, current.model, current.state),
-                    enrichmentState: 'error',
-                    enrichmentMessage: error.message,
-                    updatedAt: Date.now(),
-                };
-                this.emit('device', current);
-            })
-            .finally(() => {
-                this.enrichInFlightByUdid.delete(udid);
-            });
     }
 }

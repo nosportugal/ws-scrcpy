@@ -8,8 +8,6 @@ import GoogDeviceDescriptor from '../../types/GoogDeviceDescriptor';
 import { ScrcpyServer } from './ScrcpyServer';
 import { Properties } from './Properties';
 import { SERVER_PORT } from '../../common/Constants';
-import { DeviceDetails } from '../../types/DeviceDetails';
-import { CambrionixEnricher } from '../device-details/CambrionixEnricher';
 import Timeout = NodeJS.Timeout;
 
 enum PID_DETECTION {
@@ -38,11 +36,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private updateCount = 0;
     private throttleTimeoutId?: Timeout;
     private lastEmit = 0;
-    private cambrionixRequestInFlight = false;
-    private lastCambrionixRequestAt = 0;
     private readonly adbHost: string;
     private readonly adbPort: number;
-    private readonly cambrionixEnricher = CambrionixEnricher.getInstance();
     public readonly TAG: string;
     public readonly descriptor: GoogDeviceDescriptor;
 
@@ -71,9 +66,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             'ro.hardware.wifi': '',
             'ro.product.cpu.abi': '',
             'last.update.timestamp': 0,
-            details: undefined,
         };
-        this.descriptor.details = this.createNativeDetails('loading', 'Waiting for device properties');
         this.client = AdbExtended.createClient({ host: adbHost, port: adbPort });
         this.setState(state);
     }
@@ -86,7 +79,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
             this.connected = false;
         }
         this.descriptor.state = state;
-        this.refreshNativeDetails();
         this.emitUpdate();
         this.fetchDeviceInfo();
     }
@@ -348,7 +340,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
                     }
                 });
                 if (changed) {
-                    this.refreshNativeDetails();
                     this.emitUpdate();
                 }
                 return true;
@@ -383,7 +374,6 @@ export class Device extends TypedEmitter<DeviceEvents> {
             Promise.all([propsPromise, netIntPromise, serverPromise, adbBusyPromise, scrcpyConnectionsPromise])
                 .then((results) => {
                     this.updateTimeoutId = undefined;
-                    this.refreshEnrichedDetails();
                     const failedCount = results.filter((result) => !result).length;
                     if (!failedCount) {
                         this.updateCount = 0;
@@ -400,118 +390,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
             this.updateCount = 0;
             this.updateTimeout = Device.INITIAL_UPDATE_TIMEOUT;
             this.updateTimeoutId = undefined;
-            this.refreshNativeDetails();
             this.emitUpdate();
         }
         return;
     };
-
-    private refreshNativeDetails(): void {
-        const existing = this.descriptor.details;
-        const state = existing?.enrichmentState === 'ready' ? 'ready' : existing?.enrichmentState || 'loading';
-        const message =
-            state === 'ready' ? existing?.enrichmentMessage || '' : this.connected ? 'Awaiting Cambrionix enrichment' : 'Device offline';
-        this.descriptor.details = {
-            ...this.createNativeDetails(state, message),
-            usbHub: existing?.usbHub || this.unknownValue(),
-            usbPort: existing?.usbPort || this.unknownValue(),
-            powerStatus: existing?.powerStatus || this.unknownValue(),
-            healthStatus: existing?.healthStatus || this.unknownValue(),
-            source: existing?.source || 'native',
-        };
-    }
-
-    private createNativeDetails(state: DeviceDetails['enrichmentState'], enrichmentMessage: string): DeviceDetails {
-        const manufacturer = this.descriptor['ro.product.manufacturer'].trim();
-        const modelCode = this.descriptor['ro.product.model'].trim();
-        const marketName =
-            this.descriptor['ro.product.marketname'].trim() ||
-            this.descriptor['ro.config.marketing_name'].trim() ||
-            this.descriptor['ro.vendor.oplus.market.name'].trim() ||
-            `${manufacturer} ${modelCode}`.trim() ||
-            this.unknownValue();
-        const connectionStatus = this.connected ? this.descriptor.state || 'connected' : 'disconnected';
-        return {
-            marketName,
-            modelCode: modelCode || this.unknownValue(),
-            usbHub: this.unknownValue(),
-            usbPort: this.unknownValue(),
-            powerStatus: this.unknownValue(),
-            healthStatus: this.unknownValue(),
-            connectionStatus,
-            source: 'native',
-            enrichmentState: state,
-            enrichmentMessage,
-            updatedAt: Date.now(),
-        };
-    }
-
-    private refreshEnrichedDetails(): void {
-        if (!this.connected || !this.cambrionixEnricher.isEnabled()) {
-            if (this.descriptor.details && this.descriptor.details.enrichmentState !== 'idle') {
-                this.descriptor.details = {
-                    ...this.createNativeDetails('idle', this.connected ? 'Cambrionix disabled' : 'Device offline'),
-                    source: 'native',
-                };
-                this.emitUpdate();
-            }
-            return;
-        }
-        const now = Date.now();
-        if (this.cambrionixRequestInFlight || now - this.lastCambrionixRequestAt < this.cambrionixEnricher.getPollIntervalMs()) {
-            return;
-        }
-        this.lastCambrionixRequestAt = now;
-        this.cambrionixRequestInFlight = true;
-        const detailsBefore = this.descriptor.details;
-        if (detailsBefore && detailsBefore.enrichmentState !== 'ready') {
-            this.descriptor.details = {
-                ...detailsBefore,
-                enrichmentState: 'loading',
-                enrichmentMessage: 'Fetching Cambrionix details',
-                updatedAt: Date.now(),
-            };
-            this.emitUpdate();
-        }
-        this.cambrionixEnricher
-            .enrichByIdentifier(this.udid)
-            .then((cambrionixDetails) => {
-                const native = this.createNativeDetails('loading', '');
-                if (!cambrionixDetails) {
-                    this.descriptor.details = {
-                        ...native,
-                        source: 'native',
-                        enrichmentState: 'unavailable',
-                        enrichmentMessage: 'Cambrionix details not found',
-                    };
-                    this.emitUpdate();
-                    return;
-                }
-                this.descriptor.details = {
-                    ...native,
-                    ...cambrionixDetails,
-                    source: 'merged',
-                    enrichmentState: 'ready',
-                    enrichmentMessage: 'Enriched by Cambrionix',
-                    updatedAt: Date.now(),
-                };
-                this.emitUpdate();
-            })
-            .catch((error: Error) => {
-                this.descriptor.details = {
-                    ...this.createNativeDetails('error', error.message),
-                    source: 'native',
-                };
-                this.emitUpdate();
-            })
-            .finally(() => {
-                this.cambrionixRequestInFlight = false;
-            });
-    }
-
-    private unknownValue(): string {
-        return 'Unknown';
-    }
 
     private emitUpdate(setUpdateTime = true): void {
         const THROTTLE = 300;

@@ -242,49 +242,6 @@ body.list #device_list_menu {
     background-color: green;
 }
 
-#devices .device-details-button {
-    font-size: 75%;
-    margin-left: 4px;
-    padding: 2px 6px;
-}
-
-#devices .device-details-container {
-    width: 100%;
-}
-
-#devices .device-details-popover {
-    display: none;
-    border: 1px solid var(--device-border-color);
-    border-radius: 4px;
-    padding: 6px 8px;
-    margin-top: 4px;
-    font-size: 80%;
-    background-color: var(--main-color);
-}
-
-#devices .device-details-popover.open {
-    display: block;
-}
-
-#devices .device-details-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 2px;
-}
-
-#devices .device-details-row:last-child {
-    margin-bottom: 0;
-}
-
-#devices .device-details-label {
-    min-width: 105px;
-    color: var(--url-color);
-}
-
-#devices .device-details-value {
-    word-break: break-word;
-}
-
 #devices .device-remote-host {
     font-size: 75%;
     color: var(--url-color);
