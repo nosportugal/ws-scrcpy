@@ -30,6 +30,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
     private properties?: Record<string, string>;
+    private cachedWifiInfo?: { freqMHz: number; generation: number | '6E' };
+    private wifiInfoFetched = false;
     private spawnServer = true;
     private updateTimeoutId?: Timeout;
     private updateTimeout = Device.INITIAL_UPDATE_TIMEOUT;
@@ -75,6 +77,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
         if (state === 'device') {
             this.connected = true;
             this.properties = undefined;
+            this.cachedWifiInfo = undefined;
+            this.wifiInfoFetched = false;
         } else {
             this.connected = false;
         }
@@ -190,13 +194,21 @@ export class Device extends TypedEmitter<DeviceEvents> {
 
         const wifiIface = this.descriptor['wifi.interface'];
         if (wifiIface) {
-            const wifiInfo = await this.getWifiInfo(wifiIface);
-            list.forEach((iface) => {
-                if (iface.name === wifiIface && wifiInfo !== undefined) {
-                    iface.wifiFreqMHz = wifiInfo.freqMHz;
-                    iface.wifiGeneration = wifiInfo.generation;
-                }
-            });
+            if (!this.wifiInfoFetched) {
+                this.cachedWifiInfo = await this.getWifiInfo(wifiIface);
+                this.wifiInfoFetched = true;
+            }
+            if (this.cachedWifiInfo !== undefined) {
+                list.forEach((iface) => {
+                    if (iface.name === wifiIface) {
+                        iface.wifiFreqMHz = this.cachedWifiInfo!.freqMHz;
+                        iface.wifiGeneration = this.cachedWifiInfo!.generation;
+                    }
+                });
+            }
+        } else {
+            // wifi.interface not yet populated — allow retry on next cycle
+            this.wifiInfoFetched = false;
         }
 
         return list.sort(this.interfacesSort);
@@ -495,7 +507,12 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 changed = true;
             } else {
                 old.forEach((value, idx) => {
-                    if (value.name !== interfaces[idx].name || value.ipv4 !== interfaces[idx].ipv4) {
+                    if (
+                        value.name !== interfaces[idx].name ||
+                        value.ipv4 !== interfaces[idx].ipv4 ||
+                        value.wifiFreqMHz !== interfaces[idx].wifiFreqMHz ||
+                        value.wifiGeneration !== interfaces[idx].wifiGeneration
+                    ) {
                         changed = true;
                     }
                 });
