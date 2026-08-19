@@ -62,9 +62,13 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         }
         console.log(`Device tracker is down. Will try to restart in ${this.waitAfterError}ms`);
         this.restartTimeoutId = setTimeout(() => {
+            this.restartTimeoutId = undefined;
             this.stopTracker();
             this.waitAfterError *= 1.2;
-            this.init();
+            this.init().catch((e: Error) => {
+                console.error(`Failed to restart tracker for ${this.adbHost}:${this.adbPort}. ${e.message}`);
+                this.restartTracker();
+            });
         }, this.waitAfterError);
     };
 
