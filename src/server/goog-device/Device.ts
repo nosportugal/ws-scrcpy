@@ -177,6 +177,8 @@ export class Device extends TypedEmitter<DeviceEvents> {
         return 0;
     };
 
+    private static readonly SAFE_IFACE_PATTERN = /^[a-zA-Z0-9_.-]+$/;
+
     public async getNetInterfaces(): Promise<NetInterface[]> {
         if (!this.connected) {
             return [];
@@ -193,7 +195,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
         });
 
         const wifiIface = this.descriptor['wifi.interface'];
-        if (wifiIface) {
+        if (wifiIface && Device.SAFE_IFACE_PATTERN.test(wifiIface)) {
             if (!this.wifiInfoFetched) {
                 // Skip fetch if the device shell is currently in use to avoid disrupting
                 // any active interactive shell session; retry on the next update cycle.
@@ -227,7 +229,11 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const freqMatch = wpaOutput.match(/^freq\s*=\s*(\d+)/im);
             if (freqMatch) {
                 const freqMHz = parseInt(freqMatch[1], 10);
-                const generation = Device.wifiGenerationFromFreqAndProtocol(freqMHz, wpaOutput);
+                // wpa_cli may report wifi_generation directly
+                const genMatch = wpaOutput.match(/^wifi_generation\s*=\s*(\d+)/im);
+                const generation = genMatch
+                    ? (parseInt(genMatch[1], 10) as number)
+                    : Device.wifiGenerationFromFreqAndProtocol(freqMHz, wpaOutput);
                 return { freqMHz, generation };
             }
         } catch {
@@ -273,12 +279,12 @@ export class Device extends TypedEmitter<DeviceEvents> {
         if (freqMHz >= 6425 || /\beht\b/i.test(iwOutput)) return 7;
         // WiFi 6E — 6 GHz low band (5925–6424 MHz)
         if (freqMHz >= 5925) return '6E';
-        // HE (High Efficiency) indicates WiFi 6 on 2.4/5 GHz
-        if (/\bhe\b/i.test(iwOutput)) return 6;
+        // HE (High Efficiency) indicates WiFi 6 — match capability headings from iw/wpa_cli
+        if (/\bHE\s+(PHY|MAC|Capabilities|GI)\b/i.test(iwOutput) || /\bhe_capabilities\b/i.test(iwOutput)) return 6;
         // VHT (Very High Throughput) indicates WiFi 5, 5 GHz only
-        if (/\bvht\b/i.test(iwOutput)) return 5;
+        if (/\bVHT\s+(Capabilities|Operation|TX MCS|RX MCS)\b/i.test(iwOutput) || /\bvht_capabilities\b/i.test(iwOutput)) return 5;
         // HT (High Throughput) indicates WiFi 4
-        if (/\bht\b/i.test(iwOutput)) return 4;
+        if (/\bHT\s+(Capabilities|Operation|TX MCS|RX MCS)\b/i.test(iwOutput) || /\bht_capabilities\b/i.test(iwOutput)) return 4;
         // Fallback: guess from frequency
         if (freqMHz >= 5000) return 5;
         return 4;

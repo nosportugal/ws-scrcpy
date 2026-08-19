@@ -193,17 +193,8 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
     }
 
     private static getWifiLabel(wifiInterface: { wifiFreqMHz?: number; wifiGeneration?: number | '6E' } | undefined): string {
-        if (!wifiInterface?.wifiFreqMHz) return '';
-        if (wifiInterface.wifiGeneration !== undefined) {
-            return `WiFi ${wifiInterface.wifiGeneration}`;
-        }
-        // Fallback to frequency-based guess when generation is not available
-        const freqMHz = wifiInterface.wifiFreqMHz;
-        if (freqMHz >= 6425) return 'WiFi 7';
-        if (freqMHz >= 5925) return 'WiFi 6E';
-        if (freqMHz >= 5000) return 'WiFi 5';
-        if (freqMHz >= 2412) return 'WiFi 4';
-        return `${freqMHz} MHz`;
+        if (!wifiInterface?.wifiFreqMHz || wifiInterface.wifiGeneration === undefined) return '';
+        return `WiFi ${wifiInterface.wifiGeneration}`;
     }
 
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
