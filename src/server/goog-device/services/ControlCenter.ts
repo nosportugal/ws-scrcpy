@@ -95,9 +95,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         const { udid, descriptor } = device;
         this.applyBusyState(udid, descriptor);
         const enrichment = CambrionixEnricher.getInstance().enrich(udid);
-        if (enrichment) {
-            descriptor.cambrionix = enrichment;
-        }
+        descriptor.cambrionix = enrichment;
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
     };

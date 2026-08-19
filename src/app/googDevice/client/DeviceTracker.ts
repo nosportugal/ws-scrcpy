@@ -231,11 +231,11 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         if (device.cambrionix) {
             const header = row.querySelector('.device-header');
             if (header) {
-                const c = device.cambrionix;
+                const cambrionix = device.cambrionix;
                 const badge = document.createElement('span');
                 badge.className = 'device-cambrionix';
-                badge.title = `Cambrionix hub: ${c.source} | Port: ${c.port} | Power: ${c.powerState} | Connection: ${c.connectionState}`;
-                badge.textContent = `🔌 ${c.source} p${c.port}`;
+                badge.title = `Cambrionix hub: ${cambrionix.source} | Port: ${cambrionix.port} | Power: ${cambrionix.powerState} | Connection: ${cambrionix.connectionState}`;
+                badge.textContent = `🔌 ${cambrionix.source} p${cambrionix.port}`;
                 header.appendChild(badge);
             }
         }

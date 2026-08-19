@@ -47,30 +47,8 @@ export class Config {
             adbListenAllInterfaces: true,
             adbServers: [
                 { host: '127.0.0.1', port: 5037 },
-                { host: '192.168.200.37', port: 5037, name: '3P-Appium-iOS.local' },
             ],
-            cambrionixSources: [
-                {
-                    name: 'hub-a',
-                    enable: true,
-                    baseUrl: 'http://192.168.200.59:9595',
-                    path: '/api/v1/port',
-                    timeoutMs: 5000,
-                    retryDelayMs: 10000,
-                    cacheMs: 30000,
-                    pollMs: 20000,
-                },
-                {
-                    name: 'hub-b',
-                    enable: true,
-                    baseUrl: 'http://192.168.200.37:9595',
-                    path: '/api/v1/port',
-                    timeoutMs: 5000,
-                    retryDelayMs: 10000,
-                    cacheMs: 30000,
-                    pollMs: 20000,
-                },
-            ],
+            cambrionixSources: [],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
