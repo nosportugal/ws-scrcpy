@@ -229,6 +229,12 @@ body.list #device_list_menu {
     margin-left: 0.2em;
 }
 
+#devices .device-wifi-band {
+    font-size: 75%;
+    color: var(--url-color);
+    margin-left: 6px;
+}
+
 #devices .device-state {
     border-radius: 25px;
     background-color: red;

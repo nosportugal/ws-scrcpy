@@ -203,6 +203,9 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const commercialName = DeviceTracker.getCommercialName(device);
         const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
         const nameTitle = commercialName !== technicalName ? technicalName : '';
+        const wifiIface = device['wifi.interface'];
+        const wifiInterface = wifiIface ? device.interfaces.find((i) => i.name === wifiIface) : undefined;
+        const wifiBandText = wifiInterface?.wifiFreqMHz ? DeviceTracker.getWifiBand(wifiInterface.wifiFreqMHz) : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <span class="device-android-icon" title="Android device">🤖</span>
@@ -212,6 +215,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     <div class="release-version">${device['ro.build.version.release']}</div>
                     <div class="sdk-version">${device['ro.build.version.sdk']}</div>
                 </div>
+                ${wifiBandText ? `<div class="device-wifi-band" title="WiFi band (${wifiIface})">📶 ${wifiBandText}</div>` : ''}
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
             <div id="${servicesId}" class="services"></div>
