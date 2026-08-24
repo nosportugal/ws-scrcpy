@@ -55,6 +55,10 @@ export class WdaHttpClient {
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
                     'appium:usePrebuiltWDA': true,
+                    // WDA is already running (started manually via Xcode) and reachable by Appium
+                    // on its own host at this local port; skip xcodebuild entirely by attaching
+                    // to it directly instead of having Appium try to (re)launch it.
+                    'appium:webDriverAgentUrl': 'http://127.0.0.1:8100',
                 },
                 firstMatch: [{}],
             },
