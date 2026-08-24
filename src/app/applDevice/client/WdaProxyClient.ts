@@ -223,6 +223,10 @@ export class WdaProxyClient
         });
     }
 
+    public async performBack(): Promise<void> {
+        return this.requestWebDriverAgent(WDAMethod.EDGE_SWIPE_BACK);
+    }
+
     public async performClick(position: Position): Promise<void> {
         if (!this.screenInfo) {
             return;

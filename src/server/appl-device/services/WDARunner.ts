@@ -146,6 +146,13 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
                 return driver.updateSettings(args.options);
             case WDAMethod.SEND_KEYS:
                 return driver.keys(args.keys);
+            case WDAMethod.EDGE_SWIPE_BACK:
+                return driver.performTouch([
+                    { action: 'press', options: { x: 2, y: 300 } },
+                    { action: 'wait', options: { ms: 100 } },
+                    { action: 'moveTo', options: { x: 150, y: 300 } },
+                    { action: 'release', options: {} },
+                ]);
             default:
                 return `Unknown command: ${method}`;
         }
@@ -169,6 +176,9 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
                 return client.updateSettings(args.options);
             case WDAMethod.SEND_KEYS:
                 return client.sendKeys(args.keys);
+            case WDAMethod.EDGE_SWIPE_BACK:
+                // Common iOS "back" gesture: swipe in from the left edge of the screen.
+                return client.dragFromToForDuration(2, 300, 150, 300, 0.3);
             default:
                 return `Unknown command: ${method}`;
         }
