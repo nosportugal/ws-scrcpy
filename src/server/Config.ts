@@ -49,7 +49,7 @@ export class Config {
                 { host: '127.0.0.1', port: 5037 },
                 { host: '192.168.200.37', port: 5037, name: '3P-Appium-iOS.local' },
             ],
-            applDeviceList: [],
+            applDeviceList: [{ udid: '00008101-001220200CB8001E', name: 'iPhone (lab)', webDriverAgentUrl: 'http://127.0.0.1:8100' }],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
