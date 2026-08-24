@@ -144,9 +144,13 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         }
         this.tracker = await this.startTracker();
         const list = await this.client.listDevices();
-        list.forEach((device) => {
+        // Stagger initial per-device info fetches (each spawns several concurrent `adb shell`
+        // calls); firing them all at once for many devices on the same remote adb server can
+        // overwhelm it and cause every one of them to time out.
+        const STAGGER_MS = 150;
+        list.forEach((device, index) => {
             const { id, type } = device;
-            this.handleConnected(id, type);
+            setTimeout(() => this.handleConnected(id, type), index * STAGGER_MS);
         });
         this.initialized = true;
     }
