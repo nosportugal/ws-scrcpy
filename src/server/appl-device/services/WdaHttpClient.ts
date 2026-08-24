@@ -55,10 +55,9 @@ export class WdaHttpClient {
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
                     'appium:usePrebuiltWDA': true,
-                    // WDA is already running (started manually via Xcode) and reachable by Appium
-                    // on its own host at this local port; skip xcodebuild entirely by attaching
-                    // to it directly instead of having Appium try to (re)launch it.
-                    'appium:webDriverAgentUrl': 'http://127.0.0.1:8100',
+                    // Surface the real xcodebuild failure reason in Appium's own server log
+                    // instead of just "xcodebuild failed with code 65".
+                    'appium:showXcodeLog': true,
                 },
                 firstMatch: [{}],
             },
