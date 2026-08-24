@@ -50,7 +50,12 @@ export class WdaHttpClient {
     public async createSession(udid: string): Promise<void> {
         const response = await this.request<{ value: { sessionId: string } }>('POST', '/session', {
             capabilities: {
-                alwaysMatch: { platformName: 'iOS', 'appium:udid': udid },
+                alwaysMatch: {
+                    platformName: 'iOS',
+                    'appium:automationName': 'XCUITest',
+                    'appium:udid': udid,
+                    'appium:usePrebuiltWDA': true,
+                },
                 firstMatch: [{}],
             },
         });

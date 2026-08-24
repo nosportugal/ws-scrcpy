@@ -49,7 +49,9 @@ export interface AdbServerItem {
 export interface ApplRemoteDeviceItem {
     udid: string;
     name?: string;
-    // e.g. "http://127.0.0.1:8100" (local end of an SSH tunnel/port-forward to the WDA host)
+    // Base URL of a running Appium server (XCUITest driver) or a bare WebDriverAgent instance
+    // that already has local Xcode/usbmuxd access to this device, e.g. "http://192.168.1.10:4723"
+    // (Appium) or "http://127.0.0.1:8100" (WDA directly, via an SSH tunnel/port-forward).
     webDriverAgentUrl: string;
     // Local port already tunneled to the device's WDA MJPEG broadcaster (e.g. via a second
     // iproxy + SSH port-forward). Required for MJPEG streaming in remote mode.

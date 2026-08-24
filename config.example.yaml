@@ -24,7 +24,9 @@ adbListenAllInterfaces: true
 applDeviceList:
   - udid: '00008101-001220200CB8001E'
     name: 'iPhone (lab)'
-    webDriverAgentUrl: 'http://127.0.0.1:8100'
+    # base URL of a running Appium server (with XCUITest driver) that already has local
+    # Xcode/usbmuxd access to this device - it manages the WDA session on our behalf
+    webDriverAgentUrl: 'http://192.168.200.37:4723'
     # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
     mjpegLocalPort: 9200
 

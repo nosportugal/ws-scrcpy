@@ -53,7 +53,7 @@ export class Config {
                 {
                     udid: '00008101-001220200CB8001E',
                     name: 'iPhone (lab)',
-                    webDriverAgentUrl: 'http://127.0.0.1:8100',
+                    webDriverAgentUrl: 'http://192.168.200.37:4723',
                     mjpegLocalPort: 9200,
                 },
             ],
