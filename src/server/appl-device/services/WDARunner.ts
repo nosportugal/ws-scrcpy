@@ -158,17 +158,12 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             case WDAMethod.GET_SCREEN_WIDTH:
                 return client.getScreenWidth();
             case WDAMethod.CLICK:
-                return client.performTouch([{ action: 'tap', options: { x: args.x, y: args.y } }]);
+                return client.tap(args.x, args.y);
             case WDAMethod.PRESS_BUTTON:
                 return client.pressButton(args.name);
             case WDAMethod.SCROLL: {
                 const { from, to } = args;
-                return client.performTouch([
-                    { action: 'press', options: { x: from.x, y: from.y } },
-                    { action: 'wait', options: { ms: 500 } },
-                    { action: 'moveTo', options: { x: to.x, y: to.y } },
-                    { action: 'release', options: {} },
-                ]);
+                return client.dragFromToForDuration(from.x, from.y, to.x, to.y);
             }
             case WDAMethod.APPIUM_SETTINGS:
                 return client.updateSettings(args.options);

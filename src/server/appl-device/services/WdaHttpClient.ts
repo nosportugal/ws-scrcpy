@@ -69,16 +69,31 @@ export class WdaHttpClient {
         return this.sessionId;
     }
 
-    public performTouch(gestures: { action: string; options: Record<string, unknown> }[]): Promise<any> {
-        return this.request('POST', `/session/${this.requireSession()}/wda/touch/perform`, { actions: gestures });
+    // Appium (unlike raw WDA) doesn't proxy `/wda/...` paths directly; XCUITest-specific
+    // gestures/commands must go through the standard `execute/sync` endpoint as `mobile: <name>`.
+    private async executeMobile<T = any>(command: string, args: Record<string, unknown> = {}): Promise<T> {
+        const response = await this.request<{ value: T }>(
+            'POST',
+            `/session/${this.requireSession()}/execute/sync`,
+            { script: `mobile: ${command}`, args: [args] },
+        );
+        return response.value;
+    }
+
+    public tap(x: number, y: number): Promise<any> {
+        return this.executeMobile('tap', { x, y });
+    }
+
+    public dragFromToForDuration(fromX: number, fromY: number, toX: number, toY: number, duration = 0.5): Promise<any> {
+        return this.executeMobile('dragFromToForDuration', { fromX, fromY, toX, toY, duration });
     }
 
     public pressButton(name: string): Promise<any> {
-        return this.request('POST', `/session/${this.requireSession()}/wda/pressButton`, { name });
+        return this.executeMobile('pressButton', { name });
     }
 
     public sendKeys(value: string): Promise<any> {
-        return this.request('POST', `/session/${this.requireSession()}/wda/keys`, { value: value.split('') });
+        return this.executeMobile('type', { text: value });
     }
 
     public updateSettings(settings: Record<string, unknown>): Promise<any> {
@@ -86,11 +101,11 @@ export class WdaHttpClient {
     }
 
     public async getScreenWidth(): Promise<number> {
-        const response = await this.request<{ value?: { statusBarSize?: { width: number } } }>(
+        const response = await this.request<{ value?: { width?: number } }>(
             'GET',
-            `/session/${this.requireSession()}/wda/screen`,
+            `/session/${this.requireSession()}/window/rect`,
         );
-        return response.value?.statusBarSize?.width || 0;
+        return response.value?.width || 0;
     }
 
     public deleteSession(): Promise<any> {
