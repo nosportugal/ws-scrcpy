@@ -54,11 +54,9 @@ export class WdaHttpClient {
                     platformName: 'iOS',
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
-                    // `usePrebuiltWDA: true` runs `xcodebuild test-without-building`, which expects
-                    // an existing CLI-built test bundle at Appium's own derived-data path. Since WDA
-                    // was only ever built via Xcode's own UI (different derived-data location), that
-                    // always fails instantly with code 65. Let Appium build it fresh via the CLI.
-                    'appium:showXcodeLog': true,
+                    // Requires WDA already running (started manually via Xcode's Product > Test)
+                    // and listening on the device; Appium then attaches to it instead of building.
+                    'appium:usePrebuiltWDA': true,
                 },
                 firstMatch: [{}],
             },
