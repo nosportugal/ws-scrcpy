@@ -170,13 +170,22 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     // through `remoteWdaUrl` (e.g. an SSH-tunneled port); skip building/launching it via xcodebuild.
     private async startRemote(server: Server, remoteWdaUrl: string): Promise<void> {
         this.wdaLocalPort = await portfinder.getPortPromise();
+        const onDeviceMjpegPort = MJPEG_SERVER_PORT;
         await server.driver.createSession({
             platformName: 'iOS',
             deviceName: 'my iphone',
             udid: this.udid,
             wdaLocalPort: this.wdaLocalPort,
             webDriverAgentUrl: remoteWdaUrl,
+            mjpegServerPort: onDeviceMjpegPort,
         });
+        // MJPEG bytes still need a network path from this host to the device; since there's no
+        // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
+        // (e.g. a second iproxy + SSH port-forward) configured per-device via `mjpegLocalPort`.
+        const mjpegLocalPort = ControlCenter.getInstance().getMjpegLocalPort(this.udid);
+        if (mjpegLocalPort) {
+            this.mjpegServerPort = mjpegLocalPort;
+        }
         this.starting = false;
     }
 

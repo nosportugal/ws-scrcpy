@@ -51,6 +51,9 @@ export interface ApplRemoteDeviceItem {
     name?: string;
     // e.g. "http://127.0.0.1:8100" (local end of an SSH tunnel/port-forward to the WDA host)
     webDriverAgentUrl: string;
+    // Local port already tunneled to the device's WDA MJPEG broadcaster (e.g. via a second
+    // iproxy + SSH port-forward). Required for MJPEG streaming in remote mode.
+    mjpegLocalPort?: number;
 }
 
 // The configuration file must contain a single object with this structure

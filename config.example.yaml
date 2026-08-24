@@ -25,6 +25,8 @@ applDeviceList:
   - udid: '00008101-001220200CB8001E'
     name: 'iPhone (lab)'
     webDriverAgentUrl: 'http://127.0.0.1:8100'
+    # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
+    mjpegLocalPort: 9200
 
 # HTTP[s] servers configuration
 server:

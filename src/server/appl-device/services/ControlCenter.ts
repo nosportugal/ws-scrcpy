@@ -16,6 +16,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private tracker?: IOSDeviceLib.IOSDeviceLib;
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
     private readonly wdaUrls: Map<string, string> = new Map();
+    private readonly mjpegLocalPorts: Map<string, number> = new Map();
     private readonly id: string;
 
     protected constructor() {
@@ -83,8 +84,11 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private loadStaticDeviceList(): void {
         Config.getInstance()
             .getApplDeviceList()
-            .forEach(({ udid, name, webDriverAgentUrl }) => {
+            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort }) => {
                 this.wdaUrls.set(udid, webDriverAgentUrl);
+                if (mjpegLocalPort) {
+                    this.mjpegLocalPorts.set(udid, mjpegLocalPort);
+                }
                 this.descriptors.set(udid, {
                     udid,
                     name: name || udid,
@@ -98,6 +102,10 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
 
     public getWdaUrl(udid: string): string | undefined {
         return this.wdaUrls.get(udid);
+    }
+
+    public getMjpegLocalPort(udid: string): number | undefined {
+        return this.mjpegLocalPorts.get(udid);
     }
 
     private async startTracker(): Promise<IOSDeviceLib.IOSDeviceLib> {
