@@ -7,6 +7,7 @@ import { WDAMethod } from '../../../common/WDAMethod';
 import { timing } from 'appium-support';
 import { WdaStatus } from '../../../common/WdaStatus';
 import { ControlCenter } from './ControlCenter';
+import { WdaHttpClient } from './WdaHttpClient';
 
 const MJPEG_SERVER_PORT = 9100;
 
@@ -71,6 +72,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     protected started = false;
     protected starting = false;
     private server?: Server;
+    private remoteClient?: WdaHttpClient;
     private mjpegServerPort = 0;
     private wdaLocalPort = 0;
     private holders = 0;
@@ -96,6 +98,10 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         this.releaseTimeoutId = setTimeout(async () => {
             WdaRunner.servers.delete(this.udid);
             WdaRunner.instances.delete(this.udid);
+            if (this.remoteClient) {
+                await this.remoteClient.deleteSession();
+                delete this.remoteClient;
+            }
             if (this.server) {
                 if (this.server.driver) {
                     await this.server.driver.deleteSession();
@@ -111,6 +117,9 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     }
 
     public async request(command: ControlCenterCommand): Promise<any> {
+        if (this.remoteClient) {
+            return this.requestRemote(this.remoteClient, command);
+        }
         const driver = this.server?.driver;
         if (!driver) {
             return;
@@ -142,19 +151,48 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         }
     }
 
+    private async requestRemote(client: WdaHttpClient, command: ControlCenterCommand): Promise<any> {
+        const method = command.getMethod();
+        const args = command.getArgs();
+        switch (method) {
+            case WDAMethod.GET_SCREEN_WIDTH:
+                return client.getScreenWidth();
+            case WDAMethod.CLICK:
+                return client.performTouch([{ action: 'tap', options: { x: args.x, y: args.y } }]);
+            case WDAMethod.PRESS_BUTTON:
+                return client.pressButton(args.name);
+            case WDAMethod.SCROLL: {
+                const { from, to } = args;
+                return client.performTouch([
+                    { action: 'press', options: { x: from.x, y: from.y } },
+                    { action: 'wait', options: { ms: 500 } },
+                    { action: 'moveTo', options: { x: to.x, y: to.y } },
+                    { action: 'release', options: {} },
+                ]);
+            }
+            case WDAMethod.APPIUM_SETTINGS:
+                return client.updateSettings(args.options);
+            case WDAMethod.SEND_KEYS:
+                return client.sendKeys(args.keys);
+            default:
+                return `Unknown command: ${method}`;
+        }
+    }
+
     public async start(): Promise<void> {
         if (this.started || this.starting) {
             return;
         }
         this.emit('status-change', { status: WdaStatus.STARTING });
         this.starting = true;
-        const server = await WdaRunner.getServer(this.udid);
         const remoteWdaUrl = ControlCenter.getInstance().getWdaUrl(this.udid);
         try {
             if (remoteWdaUrl) {
-                await this.startRemote(server, remoteWdaUrl);
+                await this.startRemote(remoteWdaUrl);
             } else {
+                const server = await WdaRunner.getServer(this.udid);
                 await this.startLocal(server);
+                this.server = server;
             }
             this.started = true;
             this.emit('status-change', { status: WdaStatus.STARTED });
@@ -163,22 +201,16 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             this.starting = false;
             this.emit('error', error);
         }
-        this.server = server;
     }
 
     // Device's WDA is already built/running elsewhere (e.g. on a host with Xcode) and reachable
-    // through `remoteWdaUrl` (e.g. an SSH-tunneled port); skip building/launching it via xcodebuild.
-    private async startRemote(server: Server, remoteWdaUrl: string): Promise<void> {
-        this.wdaLocalPort = await portfinder.getPortPromise();
-        const onDeviceMjpegPort = MJPEG_SERVER_PORT;
-        await server.driver.createSession({
-            platformName: 'iOS',
-            deviceName: 'my iphone',
-            udid: this.udid,
-            wdaLocalPort: this.wdaLocalPort,
-            webDriverAgentUrl: remoteWdaUrl,
-            mjpegServerPort: onDeviceMjpegPort,
-        });
+    // through `remoteWdaUrl` (e.g. an SSH-tunneled port); talk to WDA's own REST API directly,
+    // instead of appium-xcuitest-driver's `createSession()`, which always runs a local
+    // `determineDevice()` check that requires Xcode/usbmuxd tooling this host doesn't have.
+    private async startRemote(remoteWdaUrl: string): Promise<void> {
+        const client = new WdaHttpClient(remoteWdaUrl);
+        await client.createSession(this.udid);
+        this.remoteClient = client;
         // MJPEG bytes still need a network path from this host to the device; since there's no
         // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
         // (e.g. a second iproxy + SSH port-forward) configured per-device via `mjpegLocalPort`.
