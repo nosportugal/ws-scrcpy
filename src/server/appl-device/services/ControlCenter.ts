@@ -90,7 +90,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
                     name: name || udid,
                     model: '<remote>',
                     version: '',
-                    state: DeviceState.DEVICE,
+                    state: DeviceState.CONNECTED,
                     'last.update.timestamp': Date.now(),
                 });
             });
