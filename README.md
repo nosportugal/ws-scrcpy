@@ -134,6 +134,13 @@ WebDriverAgent project is located under `node_modules/appium-webdriveragent/`.
 
 You might want to enable `AssistiveTouch` on your device: `Settings/General/Accessibility`.
 
+#### Remote WebDriverAgent (no local Xcode/USB required)
+
+If a device's WebDriverAgent was already built/signed and is running elsewhere (e.g. on a
+Mac with Xcode) and its port is reachable from this host (e.g. via an SSH tunnel), list it
+in `applDeviceList` in the run configuration (see [config.example.yaml](/config.example.yaml)).
+ws-scrcpy will connect to that WDA directly instead of using local usbmuxd discovery/`xcodebuild`.
+
 ## Custom Build
 
 You can customize project before build by overriding the

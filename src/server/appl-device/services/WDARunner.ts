@@ -6,6 +6,7 @@ import * as XCUITest from 'appium-xcuitest-driver';
 import { WDAMethod } from '../../../common/WDAMethod';
 import { timing } from 'appium-support';
 import { WdaStatus } from '../../../common/WdaStatus';
+import { ControlCenter } from './ControlCenter';
 
 const MJPEG_SERVER_PORT = 9100;
 
@@ -148,47 +149,13 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         this.emit('status-change', { status: WdaStatus.STARTING });
         this.starting = true;
         const server = await WdaRunner.getServer(this.udid);
+        const remoteWdaUrl = ControlCenter.getInstance().getWdaUrl(this.udid);
         try {
-            const remoteMjpegServerPort = MJPEG_SERVER_PORT;
-            const ports = await Promise.all([portfinder.getPortPromise(), portfinder.getPortPromise()]);
-            this.wdaLocalPort = ports[0];
-            this.mjpegServerPort = ports[1];
-            await server.driver.createSession({
-                platformName: 'iOS',
-                deviceName: 'my iphone',
-                udid: this.udid,
-                wdaLocalPort: this.wdaLocalPort,
-                usePrebuiltWDA: true,
-                mjpegServerPort: remoteMjpegServerPort,
-            });
-            await server.driver.wda.xcodebuild.waitForStart(new timing.Timer().start());
-            if (server.driver?.wda?.xcodebuild?.xcodebuild) {
-                server.driver.wda.xcodebuild.xcodebuild.on('exit', (code: number) => {
-                    this.started = false;
-                    this.starting = false;
-                    server.driver.deleteSession();
-                    delete this.server;
-                    this.emit('status-change', { status: WdaStatus.STOPPED, code });
-                    if (this.holders > 0) {
-                        this.start();
-                    }
-                });
+            if (remoteWdaUrl) {
+                await this.startRemote(server, remoteWdaUrl);
             } else {
-                this.started = false;
-                this.starting = false;
-                delete this.server;
-                throw new Error('xcodebuild process not found');
+                await this.startLocal(server);
             }
-            /// #if USE_WDA_MJPEG_SERVER
-            const { DEVICE_CONNECTIONS_FACTORY } = await import(
-                'appium-xcuitest-driver/build/lib/device-connections-factory'
-            );
-
-            await DEVICE_CONNECTIONS_FACTORY.requestConnection(this.udid, this.mjpegServerPort, {
-                usePortForwarding: true,
-                devicePort: remoteMjpegServerPort,
-            });
-            /// #endif
             this.started = true;
             this.emit('status-change', { status: WdaStatus.STARTED });
         } catch (error: any) {
@@ -197,6 +164,63 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             this.emit('error', error);
         }
         this.server = server;
+    }
+
+    // Device's WDA is already built/running elsewhere (e.g. on a host with Xcode) and reachable
+    // through `remoteWdaUrl` (e.g. an SSH-tunneled port); skip building/launching it via xcodebuild.
+    private async startRemote(server: Server, remoteWdaUrl: string): Promise<void> {
+        this.wdaLocalPort = await portfinder.getPortPromise();
+        await server.driver.createSession({
+            platformName: 'iOS',
+            deviceName: 'my iphone',
+            udid: this.udid,
+            wdaLocalPort: this.wdaLocalPort,
+            webDriverAgentUrl: remoteWdaUrl,
+        });
+        this.starting = false;
+    }
+
+    private async startLocal(server: Server): Promise<void> {
+        const remoteMjpegServerPort = MJPEG_SERVER_PORT;
+        const ports = await Promise.all([portfinder.getPortPromise(), portfinder.getPortPromise()]);
+        this.wdaLocalPort = ports[0];
+        this.mjpegServerPort = ports[1];
+        await server.driver.createSession({
+            platformName: 'iOS',
+            deviceName: 'my iphone',
+            udid: this.udid,
+            wdaLocalPort: this.wdaLocalPort,
+            usePrebuiltWDA: true,
+            mjpegServerPort: remoteMjpegServerPort,
+        });
+        await server.driver.wda.xcodebuild.waitForStart(new timing.Timer().start());
+        if (server.driver?.wda?.xcodebuild?.xcodebuild) {
+            server.driver.wda.xcodebuild.xcodebuild.on('exit', (code: number) => {
+                this.started = false;
+                this.starting = false;
+                server.driver.deleteSession();
+                delete this.server;
+                this.emit('status-change', { status: WdaStatus.STOPPED, code });
+                if (this.holders > 0) {
+                    this.start();
+                }
+            });
+        } else {
+            this.started = false;
+            this.starting = false;
+            delete this.server;
+            throw new Error('xcodebuild process not found');
+        }
+        /// #if USE_WDA_MJPEG_SERVER
+        const { DEVICE_CONNECTIONS_FACTORY } = await import(
+            'appium-xcuitest-driver/build/lib/device-connections-factory'
+        );
+
+        await DEVICE_CONNECTIONS_FACTORY.requestConnection(this.udid, this.mjpegServerPort, {
+            usePortForwarding: true,
+            devicePort: remoteMjpegServerPort,
+        });
+        /// #endif
     }
 
     public isStarted(): boolean {

@@ -7,6 +7,7 @@ import ApplDeviceDescriptor from '../../../types/ApplDeviceDescriptor';
 import { IOSDeviceLib } from 'ios-device-lib';
 import { DeviceState } from '../../../common/DeviceState';
 import { ProductType } from '../../../common/ProductType';
+import { Config } from '../../Config';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
@@ -14,6 +15,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private initialized = false;
     private tracker?: IOSDeviceLib.IOSDeviceLib;
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
+    private readonly wdaUrls: Map<string, string> = new Map();
     private readonly id: string;
 
     protected constructor() {
@@ -67,8 +69,35 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         if (this.initialized) {
             return;
         }
-        this.tracker = await this.startTracker();
+        this.loadStaticDeviceList();
+        try {
+            this.tracker = await this.startTracker();
+        } catch (e: any) {
+            // ios-device-lib needs local USB/usbmuxd access; devices reached only through a
+            // remote WDA (statically configured above) still work without it.
+            console.error(`[${ControlCenter.name}] usbmuxd device tracker unavailable: ${e.message}`);
+        }
         this.initialized = true;
+    }
+
+    private loadStaticDeviceList(): void {
+        Config.getInstance()
+            .getApplDeviceList()
+            .forEach(({ udid, name, webDriverAgentUrl }) => {
+                this.wdaUrls.set(udid, webDriverAgentUrl);
+                this.descriptors.set(udid, {
+                    udid,
+                    name: name || udid,
+                    model: '<remote>',
+                    version: '',
+                    state: DeviceState.DEVICE,
+                    'last.update.timestamp': Date.now(),
+                });
+            });
+    }
+
+    public getWdaUrl(udid: string): string | undefined {
+        return this.wdaUrls.get(udid);
     }
 
     private async startTracker(): Promise<IOSDeviceLib.IOSDeviceLib> {

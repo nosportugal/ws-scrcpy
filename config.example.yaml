@@ -18,6 +18,14 @@ adbServers:
 ## This allows remote adb clients to connect to THIS machine's ADB server
 adbListenAllInterfaces: true
 
+# Statically configured iOS devices whose WebDriverAgent already runs elsewhere (e.g. built/signed
+# via Xcode on a separate Mac) and is reachable from this host, typically through an SSH port-forward
+# or other tunnel to the device's WDA port. Bypasses local usbmuxd discovery and xcodebuild.
+applDeviceList:
+  - udid: '00008101-001220200CB8001E'
+    name: 'iPhone (lab)'
+    webDriverAgentUrl: 'http://127.0.0.1:8100'
+
 # HTTP[s] servers configuration
 server:
   - secure: false

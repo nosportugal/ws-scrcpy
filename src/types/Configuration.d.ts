@@ -43,6 +43,16 @@ export interface AdbServerItem {
     name?: string;
 }
 
+// Statically configured iOS device with a WebDriverAgent already running and reachable,
+// used when ws-scrcpy has no local USB/usbmuxd access to the device (e.g. device is
+// physically attached to another host and WDA's port is tunneled/forwarded to this machine).
+export interface ApplRemoteDeviceItem {
+    udid: string;
+    name?: string;
+    // e.g. "http://127.0.0.1:8100" (local end of an SSH tunnel/port-forward to the WDA host)
+    webDriverAgentUrl: string;
+}
+
 // The configuration file must contain a single object with this structure
 export interface Configuration {
     server?: ServerItem[];
@@ -55,4 +65,5 @@ export interface Configuration {
     adbPort?: number;
     adbListenAllInterfaces?: boolean;
     adbServers?: AdbServerItem[];
+    applDeviceList?: ApplRemoteDeviceItem[];
 }
