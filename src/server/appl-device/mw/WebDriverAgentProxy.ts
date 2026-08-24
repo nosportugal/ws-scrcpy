@@ -52,10 +52,16 @@ export class WebDriverAgentProxy extends Mw {
         this.wda.on('status-change', ({ status, code, text }) => {
             this.onStatusChange(command, status, code, text);
         });
+        this.wda.on('error', (error: Error) => {
+            console.error(`[${WebDriverAgentProxy.TAG}] WDA error for udid "${udid}": ${error.message}`);
+            this.onStatusChange(command, WdaStatus.STOPPED, -1, error.message);
+        });
         if (this.wda.isStarted()) {
             this.onStatusChange(command, WdaStatus.STARTED);
         } else {
-            this.wda.start();
+            this.wda.start().catch((error: Error) => {
+                console.error(`[${WebDriverAgentProxy.TAG}] Failed to start WDA for udid "${udid}": ${error.message}`);
+            });
         }
     }
 
