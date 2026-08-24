@@ -54,9 +54,10 @@ export class WdaHttpClient {
                     platformName: 'iOS',
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
-                    'appium:usePrebuiltWDA': true,
-                    // Surface the real xcodebuild failure reason in Appium's own server log
-                    // instead of just "xcodebuild failed with code 65".
+                    // `usePrebuiltWDA: true` runs `xcodebuild test-without-building`, which expects
+                    // an existing CLI-built test bundle at Appium's own derived-data path. Since WDA
+                    // was only ever built via Xcode's own UI (different derived-data location), that
+                    // always fails instantly with code 65. Let Appium build it fresh via the CLI.
                     'appium:showXcodeLog': true,
                 },
                 firstMatch: [{}],
