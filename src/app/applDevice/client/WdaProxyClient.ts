@@ -105,9 +105,15 @@ export class WdaProxyClient
     protected onSocketClose(event: CloseEvent): void {
         this.emit('connected', false);
         console.log(TAG, `Connection closed: ${event.reason}`);
+        // The server-side proxy instance for this channel is gone; if a session was already
+        // running, it must be re-requested on the new channel or commands would silently no-op.
+        this.hasSession = false;
         if (!this.stopped) {
             setTimeout(() => {
                 this.openNewConnection();
+                this.runWebDriverAgent().catch((error) => {
+                    console.error(TAG, `Failed to re-run WebDriverAgent after reconnect: ${error.message}`);
+                });
             }, 2000);
         }
     }

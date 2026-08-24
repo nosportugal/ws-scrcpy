@@ -16,7 +16,7 @@ export class MjpegProxyFactory {
             const wda = await WdaRunner.getInstance(udid);
             if (!wda.isStarted()) {
                 // FIXME: `wda.start()` should resolve on 'started'
-                const startPromise = new Promise((resolve) => {
+                const startPromise = new Promise((resolve, reject) => {
                     const onStatusChange = ({ status }: { status: WdaStatus }) => {
                         if (status === WdaStatus.STARTED) {
                             wda.off('status-change', onStatusChange);
@@ -24,9 +24,16 @@ export class MjpegProxyFactory {
                         }
                     };
                     wda.on('status-change', onStatusChange);
+                    wda.once('error', reject);
                 });
-                await wda.start();
-                await startPromise;
+                try {
+                    await wda.start();
+                    await startPromise;
+                } catch (error: any) {
+                    console.error(`[MjpegProxyFactory] Failed to start WDA for udid "${udid}": ${error.message}`);
+                    res.destroy();
+                    return;
+                }
             }
             const port = wda.mjpegPort;
             const url = `http://127.0.0.1:${port}`;

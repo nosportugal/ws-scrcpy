@@ -199,7 +199,14 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         } catch (error: any) {
             this.started = false;
             this.starting = false;
-            this.emit('error', error);
+            // Node's EventEmitter throws synchronously when 'error' is emitted with no listener
+            // attached (e.g. nothing has requested this WDA session yet) — crashing the whole
+            // process. Fall back to just logging in that case instead of letting it throw.
+            if (this.listenerCount('error') > 0) {
+                this.emit('error', error);
+            } else {
+                console.error(this.name, `Failed to start: ${error.message}`);
+            }
         }
     }
 
