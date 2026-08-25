@@ -56,6 +56,12 @@ export class Config {
                     webDriverAgentUrl: 'http://192.168.200.37:4723',
                     mjpegLocalPort: 9200,
                 },
+                {
+                    udid: '00008140-000231342129401C',
+                    name: 'iPhone 2 (lab)',
+                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    mjpegLocalPort: 9201,
+                },
             ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
