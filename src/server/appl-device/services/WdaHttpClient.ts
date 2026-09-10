@@ -47,16 +47,16 @@ export class WdaHttpClient {
         });
     }
 
-    public async createSession(udid: string): Promise<void> {
+    public async createSession(udid: string, signingCapabilities: Record<string, string | undefined> = {}): Promise<void> {
         const response = await this.request<{ value: { sessionId: string } }>('POST', '/session', {
             capabilities: {
                 alwaysMatch: {
                     platformName: 'iOS',
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
-                    // Requires WDA already running (started manually via Xcode's Product > Test)
-                    // and listening on the device; Appium then attaches to it instead of building.
-                    'appium:usePrebuiltWDA': true,
+                    ...Object.fromEntries(
+                        Object.entries(signingCapabilities).filter(([, value]) => value !== undefined),
+                    ),
                 },
                 firstMatch: [{}],
             },

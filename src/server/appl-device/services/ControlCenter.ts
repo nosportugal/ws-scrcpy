@@ -17,6 +17,9 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
     private readonly wdaUrls: Map<string, string> = new Map();
     private readonly mjpegLocalPorts: Map<string, number> = new Map();
+    private readonly updatedWDABundleIds: Map<string, string> = new Map();
+    private readonly xcodeOrgIds: Map<string, string> = new Map();
+    private readonly xcodeSigningIds: Map<string, string> = new Map();
     private readonly id: string;
 
     protected constructor() {
@@ -84,10 +87,19 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private loadStaticDeviceList(): void {
         Config.getInstance()
             .getApplDeviceList()
-            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort }) => {
+            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
                 this.wdaUrls.set(udid, webDriverAgentUrl);
                 if (mjpegLocalPort) {
                     this.mjpegLocalPorts.set(udid, mjpegLocalPort);
+                }
+                if (updatedWDABundleId) {
+                    this.updatedWDABundleIds.set(udid, updatedWDABundleId);
+                }
+                if (xcodeOrgId) {
+                    this.xcodeOrgIds.set(udid, xcodeOrgId);
+                }
+                if (xcodeSigningId) {
+                    this.xcodeSigningIds.set(udid, xcodeSigningId);
                 }
                 this.descriptors.set(udid, {
                     udid,
@@ -106,6 +118,18 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
 
     public getMjpegLocalPort(udid: string): number | undefined {
         return this.mjpegLocalPorts.get(udid);
+    }
+
+    public getUpdatedWDABundleId(udid: string): string | undefined {
+        return this.updatedWDABundleIds.get(udid);
+    }
+
+    public getXcodeOrgId(udid: string): string | undefined {
+        return this.xcodeOrgIds.get(udid);
+    }
+
+    public getXcodeSigningId(udid: string): string | undefined {
+        return this.xcodeSigningIds.get(udid);
     }
 
     private async startTracker(): Promise<IOSDeviceLib.IOSDeviceLib> {

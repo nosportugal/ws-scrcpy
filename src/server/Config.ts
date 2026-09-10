@@ -55,12 +55,18 @@ export class Config {
                     name: 'iPhone (lab)',
                     webDriverAgentUrl: 'http://192.168.200.37:4723',
                     mjpegLocalPort: 9200,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
                 },
                 {
                     udid: '00008140-000231342129401C',
                     name: 'iPhone 2 (lab)',
                     webDriverAgentUrl: 'http://192.168.200.37:4723',
                     mjpegLocalPort: 9201,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
                 },
             ],
         };

@@ -29,6 +29,10 @@ applDeviceList:
     webDriverAgentUrl: 'http://192.168.200.37:4723'
     # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
     mjpegLocalPort: 9200
+    # signing identifiers used by the Appium host to build WebDriverAgent
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
 
 # HTTP[s] servers configuration
 server:

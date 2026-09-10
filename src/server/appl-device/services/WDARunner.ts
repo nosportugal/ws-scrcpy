@@ -221,7 +221,12 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     // `determineDevice()` check that requires Xcode/usbmuxd tooling this host doesn't have.
     private async startRemote(remoteWdaUrl: string): Promise<void> {
         const client = new WdaHttpClient(remoteWdaUrl);
-        await client.createSession(this.udid);
+        const controlCenter = ControlCenter.getInstance();
+        await client.createSession(this.udid, {
+            'appium:updatedWDABundleId': controlCenter.getUpdatedWDABundleId(this.udid),
+            'appium:xcodeOrgId': controlCenter.getXcodeOrgId(this.udid),
+            'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
+        });
         this.remoteClient = client;
         // MJPEG bytes still need a network path from this host to the device; since there's no
         // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
