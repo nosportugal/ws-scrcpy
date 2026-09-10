@@ -48,15 +48,21 @@ export class WdaHttpClient {
     }
 
     public async createSession(udid: string, signingCapabilities: Record<string, string | undefined> = {}): Promise<void> {
+        const signingCaps: Record<string, string> = Object.keys(signingCapabilities).reduce((acc, key) => {
+            const value = signingCapabilities[key];
+            if (value !== undefined) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as Record<string, string>);
+
         const response = await this.request<{ value: { sessionId: string } }>('POST', '/session', {
             capabilities: {
                 alwaysMatch: {
                     platformName: 'iOS',
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
-                    ...Object.fromEntries(
-                        Object.entries(signingCapabilities).filter(([, value]) => value !== undefined),
-                    ),
+                    ...signingCaps,
                 },
                 firstMatch: [{}],
             },
