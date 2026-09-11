@@ -68,6 +68,33 @@ export class Config {
                     xcodeOrgId: '8S3DQVA5N6',
                     xcodeSigningId: 'Apple Development',
                 },
+                {
+                    udid: '00008110-000668CA01B8801E',
+                    name: 'iPhone 3 (lab)',
+                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    mjpegLocalPort: 9202,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008112-001C718C017BA01E',
+                    name: 'iPad (lab)',
+                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    mjpegLocalPort: 9203,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008030-001C4DCC1EA0402E',
+                    name: 'iPhone de Joao (lab)',
+                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    mjpegLocalPort: 9204,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
             ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
