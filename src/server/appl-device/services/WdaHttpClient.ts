@@ -85,6 +85,10 @@ export class WdaHttpClient {
         return this.sessionId;
     }
 
+    public getDeviceInfo(): Promise<{ name?: string; model?: string; osVersion?: string; productVersion?: string }> {
+        return this.executeMobile('deviceInfo');
+    }
+
     // Appium (unlike raw WDA) doesn't proxy `/wda/...` paths directly; XCUITest-specific
     // gestures/commands must go through the standard `execute/sync` endpoint as `mobile: <name>`.
     private async executeMobile<T = any>(command: string, args: Record<string, unknown> = {}): Promise<T> {

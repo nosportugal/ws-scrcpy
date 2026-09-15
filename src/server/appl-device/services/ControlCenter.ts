@@ -143,6 +143,27 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         return this.wdaLocalPorts.get(udid);
     }
 
+    public updateDeviceInfo(
+        udid: string,
+        info: { name?: string; model?: string; osVersion?: string; productVersion?: string },
+    ): void {
+        const descriptor = this.descriptors.get(udid);
+        if (!descriptor) {
+            return;
+        }
+        if (info.name) {
+            descriptor.name = info.name;
+        }
+        if (info.model) {
+            descriptor.model = info.model;
+        }
+        const version = info.osVersion || info.productVersion;
+        if (version) {
+            descriptor.version = version;
+        }
+        this.emit('device', descriptor);
+    }
+
     public getUpdatedWDABundleId(udid: string): string | undefined {
         return this.updatedWDABundleIds.get(udid);
     }

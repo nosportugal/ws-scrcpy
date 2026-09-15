@@ -228,6 +228,11 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
             'appium:wdaLocalPort': controlCenter.getWdaLocalPort(this.udid),
         });
+        try {
+            controlCenter.updateDeviceInfo(this.udid, await client.getDeviceInfo());
+        } catch (error: any) {
+            console.warn(this.name, `Unable to read device metadata: ${error.message}`);
+        }
         this.remoteClient = client;
         // MJPEG bytes still need a network path from this host to the device; since there's no
         // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
