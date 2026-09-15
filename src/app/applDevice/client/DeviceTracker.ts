@@ -6,7 +6,6 @@ import { html } from '../../ui/HtmlTag';
 import { DeviceState } from '../../../common/DeviceState';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
-import { ACTION } from '../../../common/Action';
 import { Tool } from '../../client/Tool';
 
 export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never> {
