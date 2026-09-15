@@ -62,6 +62,7 @@ export class WdaHttpClient {
                     platformName: 'iOS',
                     'appium:automationName': 'XCUITest',
                     'appium:udid': udid,
+                    'appium:mjpegServerPort': 9100,
                     ...signingCaps,
                 },
                 firstMatch: [{}],
