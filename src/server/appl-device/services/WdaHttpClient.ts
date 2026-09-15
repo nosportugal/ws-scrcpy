@@ -9,6 +9,30 @@ export class WdaHttpClient {
 
     constructor(private readonly baseUrl: string) {}
 
+    public async findSession(udid: string): Promise<string | undefined> {
+        const response = await this.request<{
+            value: Array<{ id?: string; sessionId?: string; capabilities?: { udid?: string } }>;
+        }>('GET', '/sessions');
+        const session = response.value?.find((item) => item.capabilities?.udid === udid);
+        return session?.id || session?.sessionId;
+    }
+
+    public adoptSession(sessionId: string): void {
+        this.sessionId = sessionId;
+    }
+
+    public async isSessionAlive(): Promise<boolean> {
+        if (!this.sessionId) {
+            return false;
+        }
+        try {
+            await this.request('GET', `/session/${this.sessionId}/window/rect`);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     private request<T = any>(method: string, path: string, body?: unknown): Promise<T> {
         return new Promise((resolve, reject) => {
             const url = new URL(path, this.baseUrl);
@@ -132,6 +156,8 @@ export class WdaHttpClient {
         if (!this.sessionId) {
             return Promise.resolve();
         }
-        return this.request('DELETE', `/session/${this.sessionId}`);
+        const sessionId = this.sessionId;
+        this.sessionId = undefined;
+        return this.request('DELETE', `/session/${sessionId}`).catch(() => undefined);
     }
 }

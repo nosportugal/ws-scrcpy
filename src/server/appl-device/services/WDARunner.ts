@@ -77,6 +77,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     private wdaLocalPort = 0;
     private holders = 0;
     protected releaseTimeoutId?: NodeJS.Timeout;
+    private startPromise?: Promise<void>;
 
     constructor(private readonly udid: string) {
         super();
@@ -185,9 +186,24 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     }
 
     public async start(): Promise<void> {
-        if (this.started || this.starting) {
-            return;
+        if (this.started) {
+            if (!this.remoteClient || (await this.remoteClient.isSessionAlive())) {
+                return;
+            }
+            await this.remoteClient.deleteSession();
+            this.remoteClient = undefined;
+            this.started = false;
         }
+        if (this.startPromise) {
+            return this.startPromise;
+        }
+        this.startPromise = this.startInternal().finally(() => {
+            this.startPromise = undefined;
+        });
+        return this.startPromise;
+    }
+
+    private async startInternal(): Promise<void> {
         this.emit('status-change', { status: WdaStatus.STARTING });
         this.starting = true;
         const remoteWdaUrl = ControlCenter.getInstance().getWdaUrl(this.udid);
@@ -200,18 +216,17 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
                 this.server = server;
             }
             this.started = true;
+            this.starting = false;
             this.emit('status-change', { status: WdaStatus.STARTED });
         } catch (error: any) {
             this.started = false;
             this.starting = false;
-            // Node's EventEmitter throws synchronously when 'error' is emitted with no listener
-            // attached (e.g. nothing has requested this WDA session yet) — crashing the whole
-            // process. Fall back to just logging in that case instead of letting it throw.
             if (this.listenerCount('error') > 0) {
                 this.emit('error', error);
             } else {
                 console.error(this.name, `Failed to start: ${error.message}`);
             }
+            throw error;
         }
     }
 
@@ -222,18 +237,42 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     private async startRemote(remoteWdaUrl: string): Promise<void> {
         const client = new WdaHttpClient(remoteWdaUrl);
         const controlCenter = ControlCenter.getInstance();
+        let existingSession: string | undefined;
+        try {
+            existingSession = await client.findSession(this.udid);
+        } catch (error: any) {
+            console.warn(this.name, `Unable to list Appium sessions: ${error.message}`);
+        }
+        if (existingSession) {
+            client.adoptSession(existingSession);
+            if (await client.isSessionAlive()) {
+                this.remoteClient = client;
+                await this.updateRemoteMetadata(controlCenter, client);
+                this.configureRemoteMjpeg(controlCenter);
+                return;
+            }
+            await client.deleteSession();
+        }
         await client.createSession(this.udid, {
             'appium:updatedWDABundleId': controlCenter.getUpdatedWDABundleId(this.udid),
             'appium:xcodeOrgId': controlCenter.getXcodeOrgId(this.udid),
             'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
             'appium:wdaLocalPort': controlCenter.getWdaLocalPort(this.udid),
         });
+        this.remoteClient = client;
+        await this.updateRemoteMetadata(controlCenter, client);
+        this.configureRemoteMjpeg(controlCenter);
+    }
+
+    private async updateRemoteMetadata(controlCenter: ControlCenter, client: WdaHttpClient): Promise<void> {
         try {
             controlCenter.updateDeviceInfo(this.udid, await client.getDeviceInfo());
         } catch (error: any) {
             console.warn(this.name, `Unable to read device metadata: ${error.message}`);
         }
-        this.remoteClient = client;
+    }
+
+    private configureRemoteMjpeg(controlCenter: ControlCenter): void {
         // MJPEG bytes still need a network path from this host to the device; since there's no
         // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
         // (e.g. a second iproxy + SSH port-forward) configured per-device via `mjpegLocalPort`.
