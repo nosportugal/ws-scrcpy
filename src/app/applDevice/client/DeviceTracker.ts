@@ -6,8 +6,8 @@ import { html } from '../../ui/HtmlTag';
 import { DeviceState } from '../../../common/DeviceState';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
+import { ACTION } from '../../../common/Action';
 import { Tool } from '../../client/Tool';
-import { StreamClientMJPEG } from './StreamClientMJPEG';
 
 export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never> {
     public static ACTION = ACTION.APPL_DEVICE_LIST;
@@ -45,8 +45,8 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
-                <div class="device-name">"${device.name}"</div>
-                <div class="device-model">${device.model}</div>
+                <div class="device-name">${device.name}</div>
+                <div class="device-model">iOS</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
                     <div class="release-version">${device.version}</div>
@@ -91,10 +91,16 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
             services.appendChild(actionBar);
         }
 
-        const streamEntry = StreamClientMJPEG.createEntryForDeviceList(device, blockClass, this.params);
-        if (streamEntry) {
-            streamEntry.forEach((item) => item && services.appendChild(item));
-        }
+        const launch = DeviceTracker.buildLink(
+            { action: ACTION.STREAM_MJPEG, player: 'mjpeghttp', udid: device.udid },
+            'Launch',
+            this.params,
+        );
+        launch.classList.add('link-stream');
+        const launchBlock = document.createElement('div');
+        launchBlock.classList.add(blockClass);
+        launchBlock.appendChild(launch);
+        services.appendChild(launchBlock);
         tbody.appendChild(row);
     }
 
