@@ -6,12 +6,9 @@ import { html } from '../../ui/HtmlTag';
 import { DeviceState } from '../../../common/DeviceState';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
-import { Tool } from '../../client/Tool';
-import { StreamClientMJPEG } from './StreamClientMJPEG';
 
 export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never> {
     public static ACTION = ACTION.APPL_DEVICE_LIST;
-    protected static tools: Set<Tool> = new Set();
     private static instancesByUrl: Map<string, DeviceTracker> = new Map();
 
     public static start(hostItem: HostItem): DeviceTracker {
@@ -45,11 +42,11 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         const servicesId = `device_services_${fullName}`;
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
-                <div class="device-name">"${device.name}"</div>
+                <div class="device-name">${device.name}</div>
                 <div class="device-model">${device.model}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
-                    <div class="release-version">${device.version}</div>
+                    <div class="release-version">iOS ${device.version}</div>
                 </div>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
@@ -62,17 +59,6 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
 
         const actionBar = document.createElement('div');
         actionBar.classList.add('device-action-bar', blockClass);
-
-        DeviceTracker.tools.forEach((tool) => {
-            const entry = tool.createEntryForDeviceList(device, blockClass, this.params);
-            if (entry) {
-                if (Array.isArray(entry)) {
-                    entry.forEach((item) => item && actionBar.appendChild(item));
-                } else {
-                    actionBar.appendChild(entry);
-                }
-            }
-        });
 
         const status = document.createElement('span');
         status.classList.add('session-state');
@@ -91,10 +77,16 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
             services.appendChild(actionBar);
         }
 
-        const streamEntry = StreamClientMJPEG.createEntryForDeviceList(device, blockClass, this.params);
-        if (streamEntry) {
-            streamEntry.forEach((item) => item && services.appendChild(item));
-        }
+        const launch = DeviceTracker.buildLink(
+            { action: ACTION.STREAM_MJPEG, player: 'mjpeghttp', udid: device.udid },
+            'Launch',
+            this.params,
+        );
+        launch.classList.add('link-stream');
+        const launchBlock = document.createElement('div');
+        launchBlock.classList.add(blockClass);
+        launchBlock.appendChild(launch);
+        services.appendChild(launchBlock);
         tbody.appendChild(row);
     }
 
