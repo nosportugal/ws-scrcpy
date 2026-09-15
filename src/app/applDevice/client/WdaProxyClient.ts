@@ -102,6 +102,12 @@ export class WdaProxyClient
         return { ...typedParams, action, udid: Util.parseString(params, 'udid', true) };
     }
 
+    protected buildDirectWebSocketUrl(): URL {
+        const url = super.buildDirectWebSocketUrl();
+        url.searchParams.set('udid', this.params.udid);
+        return url;
+    }
+
     protected onSocketClose(event: CloseEvent): void {
         this.emit('connected', false);
         console.log(TAG, `Connection closed: ${event.reason}`);
