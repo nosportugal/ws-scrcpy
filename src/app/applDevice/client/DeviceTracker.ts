@@ -7,6 +7,7 @@ import { DeviceState } from '../../../common/DeviceState';
 import { HostItem } from '../../../types/Configuration';
 import { ChannelCode } from '../../../common/ChannelCode';
 import { Tool } from '../../client/Tool';
+import { StreamClientMJPEG } from './StreamClientMJPEG';
 
 export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never> {
     public static ACTION = ACTION.APPL_DEVICE_LIST;
@@ -59,15 +60,16 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
             return;
         }
 
+        const actionBar = document.createElement('div');
+        actionBar.classList.add('device-action-bar', blockClass);
+
         DeviceTracker.tools.forEach((tool) => {
             const entry = tool.createEntryForDeviceList(device, blockClass, this.params);
             if (entry) {
                 if (Array.isArray(entry)) {
-                    entry.forEach((item) => {
-                        item && services.appendChild(item);
-                    });
+                    entry.forEach((item) => item && actionBar.appendChild(item));
                 } else {
-                    services.appendChild(entry);
+                    actionBar.appendChild(entry);
                 }
             }
         });
@@ -84,7 +86,15 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
             status.classList.add('idle');
             status.innerText = 'IDLE';
         }
-        services.appendChild(status);
+        actionBar.appendChild(status);
+        if (actionBar.hasChildNodes()) {
+            services.appendChild(actionBar);
+        }
+
+        const streamEntry = StreamClientMJPEG.createEntryForDeviceList(device, blockClass, this.params);
+        if (streamEntry) {
+            streamEntry.forEach((item) => item && services.appendChild(item));
+        }
         tbody.appendChild(row);
     }
 
