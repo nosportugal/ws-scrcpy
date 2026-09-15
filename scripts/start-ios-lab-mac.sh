@@ -16,6 +16,7 @@ UDIDS=(
 )
 
 PORTS=(9200 9201 9202 9203 9204)
+WDA_PORTS=(8100 8101 8102 8103 8104)
 
 if ! curl -fsS "$APPIUM_URL/status" >/dev/null; then
   echo "Appium is not available at $APPIUM_URL" >&2
@@ -25,6 +26,7 @@ fi
 for index in "${!UDIDS[@]}"; do
   udid="${UDIDS[$index]}"
   port="${PORTS[$index]}"
+  wda_port="${WDA_PORTS[$index]}"
   echo "Starting WDA session for $udid"
 
   curl -fsS -X POST "$APPIUM_URL/session" \
@@ -39,6 +41,7 @@ for index in "${!UDIDS[@]}"; do
           \"appium:xcodeSigningId\": \"$SIGNING_ID\",\
           \"appium:updatedWDABundleId\": \"$BUNDLE_ID\",\
           \"appium:mjpegServerPort\": 9100,\
+          \"appium:wdaLocalPort\": $wda_port,\
           \"appium:useNewWDA\": false,\
           \"appium:wdaLaunchTimeout\": 120000\
         },\
