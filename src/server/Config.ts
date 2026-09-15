@@ -53,8 +53,6 @@ export class Config {
                 {
                     udid: '00008101-001220200CB8001E',
                     name: 'iPhone (lab)',
-                    model: 'iPhone',
-                    version: '18.7.8',
                     webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9200,
                     wdaLocalPort: 8100,
@@ -65,8 +63,6 @@ export class Config {
                 {
                     udid: '00008140-000231342129401C',
                     name: 'iPhone 2 (lab)',
-                    model: 'iPhone',
-                    version: '26.2',
                     webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9201,
                     wdaLocalPort: 8101,
@@ -77,8 +73,6 @@ export class Config {
                 {
                     udid: '00008110-000668CA01B8801E',
                     name: 'iPhone 3 (lab)',
-                    model: 'iPhone',
-                    version: '26.4.1',
                     webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9202,
                     wdaLocalPort: 8102,
@@ -89,8 +83,6 @@ export class Config {
                 {
                     udid: '00008112-001C718C017BA01E',
                     name: 'iPad (lab)',
-                    model: 'iPad',
-                    version: '18.5',
                     webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9203,
                     wdaLocalPort: 8103,
@@ -101,8 +93,6 @@ export class Config {
                 {
                     udid: '00008030-001C4DCC1EA0402E',
                     name: 'iPhone de Joao (lab)',
-                    model: 'iPhone',
-                    version: '26.4.1',
                     webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9204,
                     wdaLocalPort: 8104,

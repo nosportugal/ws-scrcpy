@@ -49,8 +49,6 @@ export interface AdbServerItem {
 export interface ApplRemoteDeviceItem {
     udid: string;
     name?: string;
-    model?: string;
-    version?: string;
     // Base URL of a running Appium server (XCUITest driver) or a bare WebDriverAgent instance
     // that already has local Xcode/usbmuxd access to this device, e.g. "http://192.168.1.10:4723"
     // (Appium) or "http://127.0.0.1:8100" (WDA directly, via an SSH tunnel/port-forward).
