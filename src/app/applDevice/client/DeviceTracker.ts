@@ -71,6 +71,20 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
                 }
             }
         });
+
+        const status = document.createElement('span');
+        status.classList.add('session-state');
+        if (!isActive) {
+            status.classList.add('offline');
+            status.innerText = 'OFFLINE';
+        } else if (device.wsBusy) {
+            status.classList.add('busy');
+            status.innerText = 'BUSY';
+        } else {
+            status.classList.add('idle');
+            status.innerText = 'IDLE';
+        }
+        services.appendChild(status);
         tbody.appendChild(row);
     }
 

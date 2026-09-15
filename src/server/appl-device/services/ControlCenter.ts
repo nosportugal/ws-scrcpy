@@ -8,6 +8,7 @@ import { IOSDeviceLib } from 'ios-device-lib';
 import { DeviceState } from '../../../common/DeviceState';
 import { ProductType } from '../../../common/ProductType';
 import { Config } from '../../Config';
+import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
@@ -22,11 +23,13 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private readonly xcodeOrgIds: Map<string, string> = new Map();
     private readonly xcodeSigningIds: Map<string, string> = new Map();
     private readonly id: string;
+    private readonly unsubscribeLockUpdates: () => void;
 
     protected constructor() {
         super();
         const idString = `appl|${os.hostname()}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
+        this.unsubscribeLockUpdates = DeviceLock.subscribe(this.onLockUpdate);
     }
 
     public static getInstance(): ControlCenter {
@@ -53,10 +56,21 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             model,
             version,
             state,
+            wsBusy: DeviceLock.isLocked(udid),
             'last.update.timestamp': Date.now(),
         };
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
+    };
+
+    private onLockUpdate = (): void => {
+        this.descriptors.forEach((descriptor) => {
+            const wsBusy = DeviceLock.isLocked(descriptor.udid);
+            if (descriptor.wsBusy !== wsBusy) {
+                descriptor.wsBusy = wsBusy;
+                this.emit('device', descriptor);
+            }
+        });
     };
 
     private onDeviceLost = (device: IOSDeviceLib.IDeviceActionInfo): void => {
@@ -111,6 +125,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
                     model: '<remote>',
                     version: '',
                     state: DeviceState.CONNECTED,
+                    wsBusy: DeviceLock.isLocked(udid),
                     'last.update.timestamp': Date.now(),
                 });
             });
@@ -176,6 +191,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     }
 
     public release(): void {
+        this.unsubscribeLockUpdates();
         this.stopTracker();
     }
 
