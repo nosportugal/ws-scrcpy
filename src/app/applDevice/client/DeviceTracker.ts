@@ -46,7 +46,7 @@ export class DeviceTracker extends BaseDeviceTracker<ApplDeviceDescriptor, never
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
                 <div class="device-name">${device.name}</div>
-                <div class="device-model">iOS</div>
+                <div class="device-model">${device.model}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
                     <div class="release-version">${device.version}</div>
