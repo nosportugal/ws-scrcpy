@@ -1,0 +1,27 @@
+[Unit]
+Description=SSH tunnel for iOS Appium and MJPEG
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Environment=MAC_MINI_SSH_USER=integrationnet
+Environment=MAC_MINI_HOST=192.168.200.37
+ExecStart=/usr/bin/ssh -N \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o ExitOnForwardFailure=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -L 4723:127.0.0.1:4723 \
+  -L 9200:127.0.0.1:9200 \
+  -L 9201:127.0.0.1:9201 \
+  -L 9202:127.0.0.1:9202 \
+  -L 9203:127.0.0.1:9203 \
+  -L 9204:127.0.0.1:9204 \
+  ${MAC_MINI_SSH_USER}@${MAC_MINI_HOST}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

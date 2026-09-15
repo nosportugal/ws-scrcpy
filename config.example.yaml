@@ -26,7 +26,7 @@ applDeviceList:
     name: 'iPhone (lab)'
     # base URL of a running Appium server (with XCUITest driver) that already has local
     # Xcode/usbmuxd access to this device - it manages the WDA session on our behalf
-    webDriverAgentUrl: 'http://192.168.200.37:4723'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
     # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
     mjpegLocalPort: 9200
     # signing identifiers used by the Appium host to build WebDriverAgent
@@ -35,28 +35,28 @@ applDeviceList:
     xcodeSigningId: 'Apple Development'
   - udid: '00008140-000231342129401C'
     name: 'iPhone 2 (lab)'
-    webDriverAgentUrl: 'http://192.168.200.37:4723'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9201
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
   - udid: '00008110-000668CA01B8801E'
     name: 'iPhone 3 (lab)'
-    webDriverAgentUrl: 'http://192.168.200.37:4723'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9202
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
   - udid: '00008112-001C718C017BA01E'
     name: 'iPad (lab)'
-    webDriverAgentUrl: 'http://192.168.200.37:4723'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9203
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
   - udid: '00008030-001C4DCC1EA0402E'
     name: 'iPhone de Joao (lab)'
-    webDriverAgentUrl: 'http://192.168.200.37:4723'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9204
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'

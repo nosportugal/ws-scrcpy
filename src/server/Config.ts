@@ -53,7 +53,7 @@ export class Config {
                 {
                     udid: '00008101-001220200CB8001E',
                     name: 'iPhone (lab)',
-                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9200,
                     updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
                     xcodeOrgId: '8S3DQVA5N6',
@@ -62,7 +62,7 @@ export class Config {
                 {
                     udid: '00008140-000231342129401C',
                     name: 'iPhone 2 (lab)',
-                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9201,
                     updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
                     xcodeOrgId: '8S3DQVA5N6',
@@ -71,7 +71,7 @@ export class Config {
                 {
                     udid: '00008110-000668CA01B8801E',
                     name: 'iPhone 3 (lab)',
-                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9202,
                     updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
                     xcodeOrgId: '8S3DQVA5N6',
@@ -80,7 +80,7 @@ export class Config {
                 {
                     udid: '00008112-001C718C017BA01E',
                     name: 'iPad (lab)',
-                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9203,
                     updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
                     xcodeOrgId: '8S3DQVA5N6',
@@ -89,7 +89,7 @@ export class Config {
                 {
                     udid: '00008030-001C4DCC1EA0402E',
                     name: 'iPhone de Joao (lab)',
-                    webDriverAgentUrl: 'http://192.168.200.37:4723',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
                     mjpegLocalPort: 9204,
                     updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
                     xcodeOrgId: '8S3DQVA5N6',
