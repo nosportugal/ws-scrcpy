@@ -19,6 +19,26 @@ __HINT__: you might want to set `DEBUG` environment variable (see [debug](https:
 
 ### Android server (`scrcpy-server.jar`)
 
+### Remote iOS Appium/WDA
+
+Run Appium with debug logging on the Mac mini:
+
+> appium --address 0.0.0.0 --port 4723 --log-level debug
+
+The Appium log should show one distinct `wdaLocalPort` per iOS UDID. The Ubuntu SSH tunnel only
+needs Appium `4723` and MJPEG ports `9200` through `9204`; WDA ports `8100` through `8104` stay
+local to the Mac mini.
+
+Useful checks on Ubuntu:
+
+> curl -sS http://127.0.0.1:4723/status
+> curl -sS http://127.0.0.1:4723/sessions
+> ss -ltn | grep -E '4723|9200|9201|9202|9203|9204'
+
+If an Appium session exists but its WDA port returns `ECONNREFUSED`, the session is stale. ws-scrcpy
+should remove and recreate only that device session. Do not remove all Appium sessions while another
+iOS device is active.
+
 Source code is available [here](https://github.com/NetrisTV/scrcpy/tree/feature/websocket-server)
 __HINT__: you might want to build a dev version.
 
