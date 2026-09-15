@@ -5,4 +5,5 @@ export default interface ApplDeviceDescriptor extends BaseDeviceDescriptor {
     model: string;
     version: string;
     'last.update.timestamp': number;
+    wsBusy?: boolean;
 }

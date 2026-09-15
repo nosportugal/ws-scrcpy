@@ -1,7 +1,7 @@
 import * as process from 'process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Configuration, HostItem, ServerItem } from '../types/Configuration';
+import { AdbServerItem, ApplRemoteDeviceItem, Configuration, HostItem, ServerItem } from '../types/Configuration';
 import { EnvName } from './EnvName';
 import YAML from 'yaml';
 
@@ -10,9 +10,12 @@ const DEFAULT_PORT = 8000;
 const YAML_RE = /^.+\.(yaml|yml)$/i;
 const JSON_RE = /^.+\.(json|js)$/i;
 
+type FullConfiguration = Omit<Required<Configuration>, 'adbHost' | 'adbPort'> &
+    Pick<Configuration, 'adbHost' | 'adbPort'>;
+
 export class Config {
     private static instance?: Config;
-    private static initConfig(userConfig: Configuration = {}): Required<Configuration> {
+    private static initConfig(userConfig: Configuration = {}): FullConfiguration {
         let runGoogTracker = false;
         let announceGoogTracker = false;
         /// #if INCLUDE_GOOG
@@ -32,13 +35,82 @@ export class Config {
                 port: DEFAULT_PORT,
             },
         ];
-        const defaultConfig: Required<Configuration> = {
+        const defaultConfig: FullConfiguration = {
             runGoogTracker,
             runApplTracker,
             announceGoogTracker,
             announceApplTracker,
             server,
             remoteHostList: [],
+            adbHost: undefined,
+            adbPort: undefined,
+            adbListenAllInterfaces: true,
+            adbServers: [
+                { host: '127.0.0.1', port: 5037 },
+                { host: '192.168.200.37', port: 5037, name: '3P-Appium-iOS.local' },
+            ],
+            applDeviceList: [
+                {
+                    udid: '00008101-001220200CB8001E',
+                    name: 'iPhone (lab)',
+                    model: 'iPhone',
+                    version: '18.7.8',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
+                    mjpegLocalPort: 9200,
+                    wdaLocalPort: 8100,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008140-000231342129401C',
+                    name: 'iPhone 2 (lab)',
+                    model: 'iPhone',
+                    version: '26.2',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
+                    mjpegLocalPort: 9201,
+                    wdaLocalPort: 8101,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008110-000668CA01B8801E',
+                    name: 'iPhone 3 (lab)',
+                    model: 'iPhone',
+                    version: '26.4.1',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
+                    mjpegLocalPort: 9202,
+                    wdaLocalPort: 8102,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008112-001C718C017BA01E',
+                    name: 'iPad (lab)',
+                    model: 'iPad',
+                    version: '18.5',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
+                    mjpegLocalPort: 9203,
+                    wdaLocalPort: 8103,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+                {
+                    udid: '00008030-001C4DCC1EA0402E',
+                    name: 'iPhone de Joao (lab)',
+                    model: 'iPhone',
+                    version: '26.4.1',
+                    webDriverAgentUrl: 'http://127.0.0.1:4723',
+                    mjpegLocalPort: 9204,
+                    wdaLocalPort: 8104,
+                    updatedWDABundleId: 'com.integrationnet.WebDriverAgentRunner',
+                    xcodeOrgId: '8S3DQVA5N6',
+                    xcodeSigningId: 'Apple Development',
+                },
+            ],
         };
         const merged = Object.assign({}, defaultConfig, userConfig);
         merged.server = merged.server.map((item) => this.parseServerItem(item));
@@ -107,7 +179,7 @@ export class Config {
         return fs.readFileSync(absolutePath).toString();
     }
 
-    constructor(private fullConfig: Required<Configuration>) {}
+    constructor(private fullConfig: FullConfiguration) {}
 
     public getHostList(): HostItem[] {
         if (!this.fullConfig.remoteHostList || !this.fullConfig.remoteHostList.length) {
@@ -152,5 +224,33 @@ export class Config {
 
     public get servers(): ServerItem[] {
         return this.fullConfig.server;
+    }
+
+    public get adbHost(): string | undefined {
+        return this.fullConfig.adbHost;
+    }
+
+    public get adbPort(): number | undefined {
+        return this.fullConfig.adbPort;
+    }
+
+    public get adbListenAllInterfaces(): boolean {
+        return this.fullConfig.adbListenAllInterfaces;
+    }
+
+    public get adbServers(): AdbServerItem[] {
+        // If adbServers is explicitly configured, use it.
+        // Otherwise fall back to legacy adbHost/adbPort if set.
+        if (this.fullConfig.adbServers && this.fullConfig.adbServers.length) {
+            return this.fullConfig.adbServers;
+        }
+        if (this.fullConfig.adbHost) {
+            return [{ host: this.fullConfig.adbHost, port: this.fullConfig.adbPort || 5037 }];
+        }
+        return [{ host: '127.0.0.1', port: 5037 }];
+    }
+
+    public getApplDeviceList(): ApplRemoteDeviceItem[] {
+        return this.fullConfig.applDeviceList || [];
     }
 }

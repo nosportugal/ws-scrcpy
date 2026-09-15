@@ -7,6 +7,8 @@ import ApplDeviceDescriptor from '../../../types/ApplDeviceDescriptor';
 import { IOSDeviceLib } from 'ios-device-lib';
 import { DeviceState } from '../../../common/DeviceState';
 import { ProductType } from '../../../common/ProductType';
+import { Config } from '../../Config';
+import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> implements Service {
     private static instance?: ControlCenter;
@@ -14,12 +16,20 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private initialized = false;
     private tracker?: IOSDeviceLib.IOSDeviceLib;
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
+    private readonly wdaUrls: Map<string, string> = new Map();
+    private readonly mjpegLocalPorts: Map<string, number> = new Map();
+    private readonly wdaLocalPorts: Map<string, number> = new Map();
+    private readonly updatedWDABundleIds: Map<string, string> = new Map();
+    private readonly xcodeOrgIds: Map<string, string> = new Map();
+    private readonly xcodeSigningIds: Map<string, string> = new Map();
     private readonly id: string;
+    private readonly unsubscribeLockUpdates: () => void;
 
     protected constructor() {
         super();
         const idString = `appl|${os.hostname()}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
+        this.unsubscribeLockUpdates = DeviceLock.subscribe(this.onLockUpdate);
     }
 
     public static getInstance(): ControlCenter {
@@ -46,10 +56,21 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
             model,
             version,
             state,
+            wsBusy: DeviceLock.isLocked(udid),
             'last.update.timestamp': Date.now(),
         };
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
+    };
+
+    private onLockUpdate = (): void => {
+        this.descriptors.forEach((descriptor) => {
+            const wsBusy = DeviceLock.isLocked(descriptor.udid);
+            if (descriptor.wsBusy !== wsBusy) {
+                descriptor.wsBusy = wsBusy;
+                this.emit('device', descriptor);
+            }
+        });
     };
 
     private onDeviceLost = (device: IOSDeviceLib.IDeviceActionInfo): void => {
@@ -67,8 +88,92 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
         if (this.initialized) {
             return;
         }
-        this.tracker = await this.startTracker();
+        this.loadStaticDeviceList();
+        try {
+            this.tracker = await this.startTracker();
+        } catch (e: any) {
+            // ios-device-lib needs local USB/usbmuxd access; devices reached only through a
+            // remote WDA (statically configured above) still work without it.
+            console.error(`[${ControlCenter.name}] usbmuxd device tracker unavailable: ${e.message}`);
+        }
         this.initialized = true;
+    }
+
+    private loadStaticDeviceList(): void {
+        Config.getInstance()
+            .getApplDeviceList()
+            .forEach(({ udid, name, model, version, webDriverAgentUrl, mjpegLocalPort, wdaLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
+                this.wdaUrls.set(udid, webDriverAgentUrl);
+                if (mjpegLocalPort) {
+                    this.mjpegLocalPorts.set(udid, mjpegLocalPort);
+                }
+                if (wdaLocalPort) {
+                    this.wdaLocalPorts.set(udid, wdaLocalPort);
+                }
+                if (updatedWDABundleId) {
+                    this.updatedWDABundleIds.set(udid, updatedWDABundleId);
+                }
+                if (xcodeOrgId) {
+                    this.xcodeOrgIds.set(udid, xcodeOrgId);
+                }
+                if (xcodeSigningId) {
+                    this.xcodeSigningIds.set(udid, xcodeSigningId);
+                }
+                this.descriptors.set(udid, {
+                    udid,
+                    name: name || udid,
+                    model: model || 'iPhone',
+                    version: version || '',
+                    state: DeviceState.CONNECTED,
+                    wsBusy: DeviceLock.isLocked(udid),
+                    'last.update.timestamp': Date.now(),
+                });
+            });
+    }
+
+    public getWdaUrl(udid: string): string | undefined {
+        return this.wdaUrls.get(udid);
+    }
+
+    public getMjpegLocalPort(udid: string): number | undefined {
+        return this.mjpegLocalPorts.get(udid);
+    }
+
+    public getWdaLocalPort(udid: string): number | undefined {
+        return this.wdaLocalPorts.get(udid);
+    }
+
+    public updateDeviceInfo(
+        udid: string,
+        info: { name?: string; model?: string; osVersion?: string; productVersion?: string },
+    ): void {
+        const descriptor = this.descriptors.get(udid);
+        if (!descriptor) {
+            return;
+        }
+        if (info.name) {
+            descriptor.name = info.name;
+        }
+        if (info.model) {
+            descriptor.model = info.model;
+        }
+        const version = info.osVersion || info.productVersion;
+        if (version) {
+            descriptor.version = version;
+        }
+        this.emit('device', descriptor);
+    }
+
+    public getUpdatedWDABundleId(udid: string): string | undefined {
+        return this.updatedWDABundleIds.get(udid);
+    }
+
+    public getXcodeOrgId(udid: string): string | undefined {
+        return this.xcodeOrgIds.get(udid);
+    }
+
+    public getXcodeSigningId(udid: string): string | undefined {
+        return this.xcodeSigningIds.get(udid);
     }
 
     private async startTracker(): Promise<IOSDeviceLib.IOSDeviceLib> {
@@ -107,6 +212,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     }
 
     public release(): void {
+        this.unsubscribeLockUpdates();
         this.stopTracker();
     }
 

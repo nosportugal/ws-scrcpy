@@ -7,6 +7,7 @@ import { TypedEmitter } from '../../common/TypedEmitter';
 import GoogDeviceDescriptor from '../../types/GoogDeviceDescriptor';
 import { ScrcpyServer } from './ScrcpyServer';
 import { Properties } from './Properties';
+import { SERVER_PORT } from '../../common/Constants';
 import Timeout = NodeJS.Timeout;
 
 enum PID_DETECTION {
@@ -24,6 +25,7 @@ export interface DeviceEvents {
 export class Device extends TypedEmitter<DeviceEvents> {
     private static readonly INITIAL_UPDATE_TIMEOUT = 1500;
     private static readonly MAX_UPDATES_COUNT = 7;
+    private static readonly ADB_BUSY_PROCESS_NAMES = ['uiautomator', 'uiautomator2', 'atx-agent', 'minicap', 'minitouch', 'frida-server'];
     private connected = true;
     private pidDetectionVariant: PID_DETECTION = PID_DETECTION.UNKNOWN;
     private client: AdbKitClient;
@@ -34,26 +36,38 @@ export class Device extends TypedEmitter<DeviceEvents> {
     private updateCount = 0;
     private throttleTimeoutId?: Timeout;
     private lastEmit = 0;
+    private readonly adbHost: string;
+    private readonly adbPort: number;
     public readonly TAG: string;
     public readonly descriptor: GoogDeviceDescriptor;
 
-    constructor(public readonly udid: string, state: string) {
+    constructor(public readonly udid: string, state: string, adbHost?: string, adbPort?: number) {
         super();
         this.TAG = `[${udid}]`;
+        this.adbHost = adbHost || '127.0.0.1';
+        this.adbPort = adbPort || 5037;
         this.descriptor = {
             udid,
             state,
             interfaces: [],
             pid: -1,
+            scrcpyConnectionCount: 0,
+            wsBusy: false,
+            adbBusy: false,
+            busyReason: 'none',
             'wifi.interface': '',
             'ro.build.version.release': '',
             'ro.build.version.sdk': '',
             'ro.product.manufacturer': '',
             'ro.product.model': '',
+            'ro.product.marketname': '',
+            'ro.config.marketing_name': '',
+            'ro.vendor.oplus.market.name': '',
+            'ro.hardware.wifi': '',
             'ro.product.cpu.abi': '',
             'last.update.timestamp': 0,
         };
-        this.client = AdbExtended.createClient();
+        this.client = AdbExtended.createClient({ host: adbHost, port: adbPort });
         this.setState(state);
     }
 
@@ -100,7 +114,9 @@ export class Device extends TypedEmitter<DeviceEvents> {
     public async runShellCommandAdb(command: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             const cmd = 'adb';
-            const args = ['-s', `${this.udid}`, 'shell', command];
+            const remoteArgs: string[] =
+                this.adbHost !== '127.0.0.1' ? ['-H', this.adbHost, '-P', String(this.adbPort)] : [];
+            const args = [...remoteArgs, '-s', `${this.udid}`, 'shell', command];
             const adb = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
             let output = '';
 
@@ -171,6 +187,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const ipv4 = ipAndMask.split('/')[0];
             list.push({ name, ipv4 });
         });
+
         return list.sort(this.interfacesSort);
     }
 
@@ -327,8 +344,23 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 }
                 return true;
             });
-            const netIntPromise = this.updateInterfaces().then((interfaces) => {
+            // Chain interface update after props so that wifi.interface is already set
+            const netIntPromise = propsPromise.then(() => this.updateInterfaces()).then((interfaces) => {
                 return !!interfaces.length;
+            });
+            const adbBusyPromise = this.detectAdbBusy().then((isBusy) => {
+                if (this.descriptor.adbBusy !== isBusy) {
+                    this.descriptor.adbBusy = isBusy;
+                    this.emitUpdate();
+                }
+                return true;
+            });
+            const scrcpyConnectionsPromise = this.detectScrcpyConnections().then((count) => {
+                if (this.descriptor.scrcpyConnectionCount !== count) {
+                    this.descriptor.scrcpyConnectionCount = count;
+                    this.emitUpdate();
+                }
+                return true;
             });
             let pidPromise: Promise<number | undefined>;
             if (this.spawnServer) {
@@ -339,7 +371,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
             const serverPromise = pidPromise.then(() => {
                 return !(this.descriptor.pid === -1 && this.spawnServer);
             });
-            Promise.all([propsPromise, netIntPromise, serverPromise])
+            Promise.all([propsPromise, netIntPromise, serverPromise, adbBusyPromise, scrcpyConnectionsPromise])
                 .then((results) => {
                     this.updateTimeoutId = undefined;
                     const failedCount = results.filter((result) => !result).length;
@@ -410,7 +442,10 @@ export class Device extends TypedEmitter<DeviceEvents> {
                 changed = true;
             } else {
                 old.forEach((value, idx) => {
-                    if (value.name !== interfaces[idx].name || value.ipv4 !== interfaces[idx].ipv4) {
+                    if (
+                        value.name !== interfaces[idx].name ||
+                        value.ipv4 !== interfaces[idx].ipv4
+                    ) {
                         changed = true;
                     }
                 });
@@ -460,6 +495,41 @@ export class Device extends TypedEmitter<DeviceEvents> {
         } catch (error: any) {
             console.error(this.TAG, `Error: ${error.message}`);
             throw error;
+        }
+    }
+
+    private async detectAdbBusy(): Promise<boolean> {
+        if (!this.connected) {
+            return false;
+        }
+        for (const processName of Device.ADB_BUSY_PROCESS_NAMES) {
+            try {
+                const pids = await this.getPidOf(processName);
+                if (Array.isArray(pids) && pids.length > 0) {
+                    return true;
+                }
+            } catch {
+                // Best effort check; ignore per-process failures.
+            }
+        }
+        return false;
+    }
+
+    private async detectScrcpyConnections(): Promise<number> {
+        if (!this.connected) {
+            return 0;
+        }
+        const portHex = SERVER_PORT.toString(16).toUpperCase().padStart(4, '0');
+        const command = `cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i ':${portHex} ' | grep -c ' 01 ' || true`;
+        try {
+            const output = await this.runShellCommandAdbKit(command);
+            const count = parseInt(output.trim(), 10);
+            if (isNaN(count)) {
+                return 0;
+            }
+            return count;
+        } catch {
+            return 0;
         }
     }
 }

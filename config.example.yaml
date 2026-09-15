@@ -6,6 +6,67 @@ runGoogTracker: false
 ## track iOS devices (default: true, if was INCLUDE_APPL enabled in build config)
 runApplTracker: false;
 
+# ADB server configuration
+## List of ADB servers to connect to (devices from all servers are aggregated)
+adbServers:
+  - host: 127.0.0.1
+    port: 5037
+  ## Optionally add remote ADB servers:
+  # - host: 192.168.1.100
+  #   port: 5037
+## Start local ADB daemon listening on all network interfaces at server startup (default: true)
+## This allows remote adb clients to connect to THIS machine's ADB server
+adbListenAllInterfaces: true
+
+# Statically configured iOS devices whose WebDriverAgent already runs elsewhere (e.g. built/signed
+# via Xcode on a separate Mac) and is reachable from this host, typically through an SSH port-forward
+# or other tunnel to the device's WDA port. Bypasses local usbmuxd discovery and xcodebuild.
+applDeviceList:
+  - udid: '00008101-001220200CB8001E'
+    name: 'iPhone (lab)'
+    # base URL of a running Appium server (with XCUITest driver) that already has local
+    # Xcode/usbmuxd access to this device - it manages the WDA session on our behalf
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
+    # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
+    mjpegLocalPort: 9200
+    wdaLocalPort: 8100
+    # signing identifiers used by the Appium host to build WebDriverAgent
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
+  - udid: '00008140-000231342129401C'
+    name: 'iPhone 2 (lab)'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
+    mjpegLocalPort: 9201
+    wdaLocalPort: 8101
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
+  - udid: '00008110-000668CA01B8801E'
+    name: 'iPhone 3 (lab)'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
+    mjpegLocalPort: 9202
+    wdaLocalPort: 8102
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
+  - udid: '00008112-001C718C017BA01E'
+    name: 'iPad (lab)'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
+    mjpegLocalPort: 9203
+    wdaLocalPort: 8103
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
+  - udid: '00008030-001C4DCC1EA0402E'
+    name: 'iPhone de Joao (lab)'
+    webDriverAgentUrl: 'http://127.0.0.1:4723'
+    mjpegLocalPort: 9204
+    wdaLocalPort: 8104
+    updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
+    xcodeOrgId: '8S3DQVA5N6'
+    xcodeSigningId: 'Apple Development'
+
 # HTTP[s] servers configuration
 server:
   - secure: false
@@ -38,3 +99,25 @@ remoteHostList:
     secure: true
     hostname: third-mobile-stand.example.com
     port: 8443
+
+# Cambrionix Hub Manager enrichment (optional)
+# List up to N Cambrionix sources.  Each source is polled independently.
+# If a source is unreachable, the other source(s) continue working normally.
+# Remove or set enable: false to disable a source without removing its config.
+cambrionixSources:
+  - name: hub-a                          # label used in logs/metrics
+    enable: true
+    baseUrl: http://10.0.0.10:9595       # Hub Manager base URL
+    path: /api/v1/port                   # API path (default: /api/v1/port)
+    timeoutMs: 5000                      # per-request timeout (ms)
+    retryDelayMs: 10000                  # delay before retry on error (ms)
+    cacheMs: 30000                       # cache TTL (ms)
+    pollMs: 20000                        # background poll interval (ms)
+  - name: hub-b
+    enable: true
+    baseUrl: http://10.0.0.11:9595
+    path: /api/v1/port
+    timeoutMs: 5000
+    retryDelayMs: 10000
+    cacheMs: 30000
+    pollMs: 20000

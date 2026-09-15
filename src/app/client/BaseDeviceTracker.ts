@@ -9,6 +9,7 @@ import { HostItem } from '../../types/Configuration';
 import { Tool } from './Tool';
 import Util from '../Util';
 import { EventMap } from '../../common/TypedEmitter';
+import NosInovacaoLogoSVG from '../../public/images/nos-inovacao-logo.svg';
 
 const TAG = '[BaseDeviceTracker]';
 
@@ -81,11 +82,12 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     protected id = '';
     private created = false;
     private messageId = 0;
+    private ccBlocks: Map<string, { elementId: string; trackerName: string; descriptors: DD[] }> = new Map();
 
     protected constructor(params: ParamsDeviceTracker, protected readonly directUrl: string) {
         super(params);
         this.elementId = `tracker_instance${++BaseDeviceTracker.instanceId}`;
-        this.trackerName = `Unavailable. Host: ${params.hostname}, type: ${params.type}`;
+        this.trackerName = params.hostname ?? location.hostname;
         this.setBodyClass('list');
         this.setTitle();
     }
@@ -103,22 +105,40 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         return ++this.messageId;
     }
 
-    protected buildDeviceTable(): void {
-        const data = this.descriptors;
-        const devices = this.getOrCreateTableHolder();
-        const tbody = this.getOrBuildTableBody(devices);
-
-        const block = this.getOrCreateTrackerBlock(tbody, this.trackerName);
-        data.forEach((item) => {
-            this.buildDeviceRow(block, item);
+    private static sortDescriptors<D extends BaseDeviceDescriptor>(descriptors: D[]): D[] {
+        return [...descriptors].sort((a, b) => {
+            const aActive = a.state === 'device' ? 0 : 1;
+            const bActive = b.state === 'device' ? 0 : 1;
+            return aActive - bActive;
         });
     }
 
-    private setNameValue(parent: Element | null, name: string): void {
+    protected buildDeviceTable(): void {
+        const devices = this.getOrCreateTableHolder();
+        const tbody = this.getOrBuildTableBody(devices);
+
+        if (this.ccBlocks.size === 0) {
+            // No CC blocks yet — render the initial placeholder using the legacy single-block path
+            const block = this.getOrCreateTrackerBlock(tbody, this.trackerName, this.elementId);
+            BaseDeviceTracker.sortDescriptors(this.descriptors).forEach((item) => {
+                this.buildDeviceRow(block, item);
+            });
+            return;
+        }
+
+        for (const [, cc] of this.ccBlocks) {
+            const block = this.getOrCreateTrackerBlock(tbody, cc.trackerName, cc.elementId);
+            BaseDeviceTracker.sortDescriptors(cc.descriptors).forEach((item) => {
+                this.buildDeviceRow(block, item);
+            });
+        }
+    }
+
+    private setNameValue(parent: Element | null, name: string, blockElementId: string): void {
         if (!parent) {
             return;
         }
-        const nameBlockId = `${this.elementId}_name`;
+        const nameBlockId = `${blockElementId}_name`;
         let nameEl = document.getElementById(nameBlockId);
         if (!nameEl) {
             nameEl = document.createElement('div');
@@ -129,19 +149,21 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         parent.insertBefore(nameEl, parent.firstChild);
     }
 
-    private getOrCreateTrackerBlock(parent: Element, controlCenterName: string): Element {
-        let el = document.getElementById(this.elementId);
+    private getOrCreateTrackerBlock(parent: Element, controlCenterName: string, blockElementId: string): Element {
+        let el = document.getElementById(blockElementId);
         if (!el) {
             el = document.createElement('div');
-            el.id = this.elementId;
+            el.id = blockElementId;
             parent.appendChild(el);
-            this.created = true;
+            if (blockElementId === this.elementId) {
+                this.created = true;
+            }
         } else {
             while (el.children.length) {
                 el.removeChild(el.children[0]);
             }
         }
-        this.setNameValue(el, controlCenterName);
+        this.setNameValue(el, controlCenterName, blockElementId);
         return el;
     }
 
@@ -168,16 +190,27 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
         switch (message.type) {
             case BaseDeviceTracker.ACTION_LIST: {
-                const event = message.data as DeviceTrackerEventList<DD>;
-                this.descriptors = event.list;
-                this.setIdAndHostName(event.id, event.name);
+                const evt = message.data as DeviceTrackerEventList<DD>;
+                // Remove any stale ccBlocks for the same tracker name but a different id
+                // (happens on server restart, which generates a new uptime-based id)
+                for (const [staleId, staleBlock] of this.ccBlocks) {
+                    if (staleId !== evt.id && staleBlock.trackerName === evt.name) {
+                        const el = document.getElementById(staleBlock.elementId);
+                        if (el) {
+                            el.remove();
+                        }
+                        this.ccBlocks.delete(staleId);
+                    }
+                }
+                this.getOrCreateCcBlock(evt.id, evt.name).descriptors = evt.list;
+                this.setIdAndHostName(evt.id, evt.name);
                 this.buildDeviceTable();
                 break;
             }
             case BaseDeviceTracker.ACTION_DEVICE: {
-                const event = message.data as DeviceTrackerEvent<DD>;
-                this.setIdAndHostName(event.id, event.name);
-                this.updateDescriptor(event.device);
+                const evt = message.data as DeviceTrackerEvent<DD>;
+                this.setIdAndHostName(evt.id, evt.name);
+                this.updateDescriptor(evt.device, evt.id);
                 this.buildDeviceTable();
                 break;
             }
@@ -192,13 +225,19 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         }
         this.id = id;
         this.trackerName = trackerName;
-        this.setNameValue(document.getElementById(this.elementId), trackerName);
+        const cc = this.ccBlocks.get(id);
+        if (cc) {
+            this.setNameValue(document.getElementById(cc.elementId), trackerName, cc.elementId);
+        }
     }
+
+    private static readonly PAGE_HEADER_ID = 'page-header';
 
     protected getOrCreateTableHolder(): HTMLElement {
         const id = BaseDeviceTracker.HOLDER_ELEMENT_ID;
         let devices = document.getElementById(id);
         if (!devices) {
+            BaseDeviceTracker.getOrCreatePageHeader();
             devices = document.createElement('div');
             devices.id = id;
             devices.className = 'table-wrapper';
@@ -207,15 +246,58 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
         return devices;
     }
 
-    protected updateDescriptor(descriptor: DD): void {
-        const idx = this.descriptors.findIndex((item: DD) => {
+    private static getOrCreatePageHeader(): void {
+        if (document.getElementById(BaseDeviceTracker.PAGE_HEADER_ID)) {
+            return;
+        }
+        const header = document.createElement('header');
+        header.id = BaseDeviceTracker.PAGE_HEADER_ID;
+        const logoWrapper = document.createElement('span');
+        logoWrapper.className = 'page-header-logo';
+        logoWrapper.innerHTML = NosInovacaoLogoSVG;
+        const divider = document.createElement('span');
+        divider.className = 'page-header-divider';
+        const title = document.createElement('span');
+        title.className = 'page-header-title';
+        title.textContent = 'Mobile Labs';
+        header.appendChild(logoWrapper);
+        header.appendChild(divider);
+        header.appendChild(title);
+        const rightLogo = document.createElement('span');
+        rightLogo.className = 'page-header-right-logo';
+        rightLogo.innerHTML = NosInovacaoLogoSVG;
+        header.appendChild(rightLogo);
+        document.body.prepend(header);
+    }
+
+    protected updateDescriptor(descriptor: DD, ccId?: string): void {
+        const descriptors = ccId ? (this.ccBlocks.get(ccId)?.descriptors ?? this.descriptors) : this.descriptors;
+        const idx = descriptors.findIndex((item: DD) => {
             return item.udid === descriptor.udid;
         });
         if (idx !== -1) {
-            this.descriptors[idx] = descriptor;
+            descriptors[idx] = descriptor;
         } else {
-            this.descriptors.push(descriptor);
+            descriptors.push(descriptor);
         }
+    }
+
+    private getOrCreateCcBlock(
+        ccId: string,
+        trackerName: string,
+    ): { elementId: string; trackerName: string; descriptors: DD[] } {
+        let cc = this.ccBlocks.get(ccId);
+        if (!cc) {
+            cc = {
+                elementId: `tracker_instance${++BaseDeviceTracker.instanceId}`,
+                trackerName,
+                descriptors: [],
+            };
+            this.ccBlocks.set(ccId, cc);
+        } else {
+            cc.trackerName = trackerName;
+        }
+        return cc;
     }
 
     protected getOrBuildTableBody(parent: HTMLElement): Element {
@@ -235,6 +317,13 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
     }
 
     public getDescriptorByUdid(udid: string): DD | undefined {
+        // Search across all CC blocks first
+        for (const [, cc] of this.ccBlocks) {
+            const found = cc.descriptors.find((descriptor: DD) => descriptor.udid === udid);
+            if (found) {
+                return found;
+            }
+        }
         if (!this.descriptors.length) {
             return;
         }
@@ -245,6 +334,17 @@ export abstract class BaseDeviceTracker<DD extends BaseDeviceDescriptor, TE exte
 
     public destroy(): void {
         super.destroy();
+        // Remove all CC blocks
+        for (const [, cc] of this.ccBlocks) {
+            const el = document.getElementById(cc.elementId);
+            if (el) {
+                const { parentElement } = el;
+                el.remove();
+                if (parentElement && !parentElement.children.length) {
+                    parentElement.remove();
+                }
+            }
+        }
         if (this.created) {
             const el = document.getElementById(this.elementId);
             if (el) {

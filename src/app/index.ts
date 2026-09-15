@@ -60,7 +60,6 @@ window.onload = async function (): Promise<void> {
 
         /// #if USE_WDA_MJPEG_SERVER
         const { StreamClientMJPEG } = await import('./applDevice/client/StreamClientMJPEG');
-        DeviceTracker.registerTool(StreamClientMJPEG);
 
         const { MjpegPlayer } = await import('./player/MjpegPlayer');
         StreamClientMJPEG.registerPlayer(MjpegPlayer);

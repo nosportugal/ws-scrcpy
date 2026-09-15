@@ -8,6 +8,11 @@ import { WdaProxyClient } from '../client/WdaProxyClient';
 
 const BUTTONS = [
     {
+        title: 'Back',
+        name: 'back',
+        icon: SvgImage.Icon.ARROW_BACK,
+    },
+    {
         title: 'Home',
         name: 'home',
         icon: SvgImage.Icon.HOME,
@@ -40,7 +45,11 @@ export class ApplToolBox extends ToolBox {
                 return;
             }
             const { name } = element.optional;
-            wdaConnection.pressButton(name);
+            if (name === 'back') {
+                wdaConnection.performBack();
+            } else {
+                wdaConnection.pressButton(name);
+            }
         };
         const elements: ToolBoxElement<any>[] = list.map((item) => {
             const button = new ToolBoxButton(item.title, item.icon, {

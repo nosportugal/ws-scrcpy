@@ -362,16 +362,16 @@ export class DevtoolsClient extends ManagerClient<ParamsDevtools, never> {
         }
         const entry = document.createElement('div');
         entry.classList.add('devtools', blockClass);
-        entry.appendChild(
-            BaseDeviceTracker.buildLink(
-                {
-                    action: ACTION.DEVTOOLS,
-                    udid: descriptor.udid,
-                },
-                'devtools',
-                params,
-            ),
+        const link = BaseDeviceTracker.buildLink(
+            {
+                action: ACTION.DEVTOOLS,
+                udid: descriptor.udid,
+            },
+            'devtools',
+            params,
         );
+        link.title = 'Open Chrome DevTools';
+        entry.appendChild(link);
         return entry;
     }
 }

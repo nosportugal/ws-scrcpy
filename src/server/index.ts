@@ -1,5 +1,9 @@
 import '../../LICENSE';
 import * as readline from 'readline';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { spawnSync } from 'child_process';
 import { Config } from './Config';
 import { HttpServer } from './services/HttpServer';
 import { WebSocketServer } from './services/WebSocketServer';
@@ -22,11 +26,80 @@ const loadPlatformModulesPromises: Promise<void>[] = [];
 
 const config = Config.getInstance();
 
+function startAdbServerAllInterfaces(port?: number): void {
+    // If ADB is already listening on this port, keep it as-is.
+    // Replacing the daemon may switch runtime user/keys and break device visibility.
+    if (typeof port === 'number') {
+        const check = spawnSync('ss', ['-ltn'], { encoding: 'utf8' });
+        if (!check.error && check.status === 0) {
+            const hasPort = new RegExp(`:${port}\\b`);
+            const lines = check.stdout.split('\n');
+            if (lines.some((line) => line.includes('LISTEN') && hasPort.test(line))) {
+                console.log(`[ADB] Existing daemon detected on port ${port}; keeping current instance`);
+                return;
+            }
+        }
+    }
+
+    const args = ['-a'];
+    if (typeof port === 'number') {
+        args.push('-P', String(port));
+    }
+    args.push('start-server');
+    const result = spawnSync('adb', args, { encoding: 'utf8' });
+    if (result.error || result.status !== 0) {
+        const msg = result.stderr || result.error?.message || 'Unknown adb startup error';
+        console.error(`[ADB] Failed to start all-interface server: ${msg}`);
+        return;
+    }
+    console.log('[ADB] Server configured to listen on all interfaces');
+}
+
+function installAdbAllInterfacesWrapper(): string {
+    const wrapperPath = path.join(os.tmpdir(), 'ws-scrcpy-adb-wrapper.sh');
+    const content = [
+        '#!/bin/sh',
+        '# ws-scrcpy wrapper: ensures adb start-server always uses -a (all interfaces)',
+        'for arg in "$@"; do',
+        '  if [ "$arg" = "start-server" ]; then',
+        '    exec adb -a "$@"',
+        '  fi',
+        'done',
+        'exec adb "$@"',
+        '',
+    ].join('\n');
+    fs.writeFileSync(wrapperPath, content, { mode: 0o755 });
+    return wrapperPath;
+}
+
 /// #if INCLUDE_GOOG
 async function loadGoogModules() {
+    if (config.adbListenAllInterfaces) {
+        startAdbServerAllInterfaces(config.adbPort);
+    }
+    const { AdbExtended } = await import('./goog-device/adb');
+    const adbOptions: { host?: string; port?: number; bin?: string } = {};
+    if (config.adbHost) {
+        adbOptions.host = config.adbHost;
+    }
+    if (config.adbPort) {
+        adbOptions.port = config.adbPort;
+    }
+    if (config.adbListenAllInterfaces) {
+        adbOptions.bin = installAdbAllInterfacesWrapper();
+    }
+    AdbExtended.setDefaultOptions(adbOptions);
+
     const { ControlCenter } = await import('./goog-device/services/ControlCenter');
     const { DeviceTracker } = await import('./goog-device/mw/DeviceTracker');
     const { WebsocketProxyOverAdb } = await import('./goog-device/mw/WebsocketProxyOverAdb');
+
+    // Create one ControlCenter per configured ADB server
+    const adbServers = config.adbServers;
+    for (const adbServer of adbServers) {
+        ControlCenter.createInstance(adbServer.host, adbServer.port || 5037, adbServer.name);
+        console.log(`[ADB] Registered ADB server: ${adbServer.host}:${adbServer.port || 5037}${adbServer.name ? ` (${adbServer.name})` : ''}`);
+    }
 
     if (config.runLocalGoogTracker) {
         mw2List.push(DeviceTracker);

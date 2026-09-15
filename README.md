@@ -134,6 +134,37 @@ WebDriverAgent project is located under `node_modules/appium-webdriveragent/`.
 
 You might want to enable `AssistiveTouch` on your device: `Settings/General/Accessibility`.
 
+#### Remote WebDriverAgent (no local Xcode/USB required)
+
+If a device's WebDriverAgent was already built/signed and is running elsewhere (e.g. on a
+Mac with Xcode) and its port is reachable from this host (e.g. via an SSH tunnel), list it
+in `applDeviceList` in the run configuration (see [config.example.yaml](/config.example.yaml)).
+ws-scrcpy will connect to that WDA directly instead of using local usbmuxd discovery/`xcodebuild`.
+
+#### Remote iOS lab architecture
+
+The lab setup uses one Appium server on the Mac mini and one Appium session per iOS device. The
+`.p12` certificate and provisioning profile stay on the Mac mini and are never sent to ws-scrcpy.
+
+The Ubuntu host uses one SSH tunnel for Appium and MJPEG:
+
+```text
+Appium: 4723
+MJPEG: 9200, 9201, 9202, 9203, 9204
+WDA local ports on the Mac mini: 8100, 8101, 8102, 8103, 8104
+```
+
+WDA ports are internal to the Mac mini and are not part of the SSH tunnel. Each `wdaLocalPort` must
+be unique per UDID so multiple devices can run simultaneously. MJPEG is exposed through `iproxy`
+and the matching SSH-forwarded port.
+
+ws-scrcpy creates an Appium session when a device is opened. It checks for an existing healthy
+session for that UDID, removes a stale session, and retries creation when WDA is no longer reachable.
+The WebSocket device lock prevents a second browser session from using the same device.
+
+The iOS card obtains name, model, and iOS version from Appium/XCUITest `mobile: deviceInfo` when
+available. Metadata is best-effort and must not prevent WDA or the video stream from starting.
+
 ## Custom Build
 
 You can customize project before build by overriding the

@@ -17,7 +17,7 @@ type Block = {
 
 export class MsePlayer extends BasePlayer {
     public static readonly storageKeyPrefix = 'MseDecoder';
-    public static readonly playerFullName = 'H264 Converter';
+    public static readonly playerFullName = 'Launch';
     public static readonly playerCodeName = 'mse';
     public static readonly preferredVideoSettings: VideoSettings = new VideoSettings({
         lockedVideoOrientation: -1,

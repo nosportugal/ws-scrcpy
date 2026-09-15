@@ -102,12 +102,24 @@ export class WdaProxyClient
         return { ...typedParams, action, udid: Util.parseString(params, 'udid', true) };
     }
 
+    protected buildDirectWebSocketUrl(): URL {
+        const url = super.buildDirectWebSocketUrl();
+        url.searchParams.set('udid', this.params.udid);
+        return url;
+    }
+
     protected onSocketClose(event: CloseEvent): void {
         this.emit('connected', false);
         console.log(TAG, `Connection closed: ${event.reason}`);
+        // The server-side proxy instance for this channel is gone; if a session was already
+        // running, it must be re-requested on the new channel or commands would silently no-op.
+        this.hasSession = false;
         if (!this.stopped) {
             setTimeout(() => {
                 this.openNewConnection();
+                this.runWebDriverAgent().catch((error) => {
+                    console.error(TAG, `Failed to re-run WebDriverAgent after reconnect: ${error.message}`);
+                });
             }, 2000);
         }
     }
@@ -215,6 +227,10 @@ export class WdaProxyClient
         return this.requestWebDriverAgent(WDAMethod.PRESS_BUTTON, {
             name,
         });
+    }
+
+    public async performBack(): Promise<void> {
+        return this.requestWebDriverAgent(WDAMethod.EDGE_SWIPE_BACK);
     }
 
     public async performClick(position: Position): Promise<void> {

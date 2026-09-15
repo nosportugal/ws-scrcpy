@@ -170,6 +170,28 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         return title.toLowerCase().replace(/\s/g, '_');
     }
 
+    private static isRemoteHost(hostname: string): boolean {
+        return hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== location.hostname;
+    }
+
+    private static getCommercialName(device: GoogDeviceDescriptor): string {
+        const manufacturer = device['ro.product.manufacturer'].toLowerCase();
+        if (manufacturer === 'samsung') {
+            const marketingName = device['ro.config.marketing_name'];
+            const model = device['ro.product.model'];
+            if (marketingName && model) {
+                return `${marketingName} (${model})`;
+            }
+            return marketingName || (model ? `Samsung ${model}` : 'Samsung');
+        }
+        return (
+            device['ro.product.marketname'] ||
+            device['ro.config.marketing_name'] ||
+            device['ro.vendor.oplus.market.name'] ||
+            `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim()
+        );
+    }
+
     protected buildDeviceRow(tbody: Element, device: GoogDeviceDescriptor): void {
         let selectedInterfaceUrl = '';
         let selectedInterfaceName = '';
@@ -178,35 +200,60 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
         const isActive = device.state === DeviceState.DEVICE;
         let hasPid = false;
         const servicesId = `device_services_${fullName}`;
+        const remoteHost =
+            DeviceTracker.isRemoteHost(this.params.hostname ?? '') ? (this.params.hostname ?? '') : '';
+        const commercialName = DeviceTracker.getCommercialName(device);
+        const technicalName = `${device['ro.product.manufacturer']} ${device['ro.product.model']}`.trim();
+        const nameTitle = commercialName !== technicalName ? technicalName : '';
         const row = html`<div class="device ${isActive ? 'active' : 'not-active'}">
             <div class="device-header">
-                <div class="device-name">${device['ro.product.manufacturer']} ${device['ro.product.model']}</div>
+                <span class="device-android-icon" title="Android device">🤖</span>
+                <div class="device-name" title="${nameTitle}">${commercialName}</div>
                 <div class="device-serial">${device.udid}</div>
                 <div class="device-version">
-                    <div class="release-version">${device['ro.build.version.release']}</div>
-                    <div class="sdk-version">${device['ro.build.version.sdk']}</div>
+                    <div class="release-version">Android ${device['ro.build.version.release']}</div>
+                    <div class="sdk-version">API ${device['ro.build.version.sdk']}</div>
                 </div>
                 <div class="device-state" title="State: ${device.state}"></div>
             </div>
             <div id="${servicesId}" class="services"></div>
         </div>`.content;
+        if (remoteHost) {
+            const header = row.querySelector('.device-header');
+            if (header) {
+                const badge = document.createElement('span');
+                badge.className = 'device-remote-host';
+                badge.title = 'Remote ADB server';
+                badge.textContent = `📡 ${remoteHost}`;
+                header.appendChild(badge);
+            }
+        }
         const services = row.getElementById(servicesId);
         if (!services) {
             return;
         }
+
+        const actionBar = document.createElement('div');
+        actionBar.classList.add('device-action-bar', blockClass);
 
         DeviceTracker.tools.forEach((tool) => {
             const entry = tool.createEntryForDeviceList(device, blockClass, this.params);
             if (entry) {
                 if (Array.isArray(entry)) {
                     entry.forEach((item) => {
-                        item && services.appendChild(item);
+                        if (item) {
+                            actionBar.appendChild(item);
+                        }
                     });
                 } else {
-                    services.appendChild(entry);
+                    actionBar.appendChild(entry);
                 }
             }
         });
+
+        if (actionBar.hasChildNodes()) {
+            services.appendChild(actionBar);
+        }
 
         const streamEntry = StreamClientScrcpy.createEntryForDeviceList(device, blockClass, fullName, this.params);
         streamEntry && services.appendChild(streamEntry);
@@ -225,6 +272,7 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             services.appendChild(td);
             if (fieldName === 'pid') {
                 hasPid = value !== '-1';
+                const isBusy = !!device.wsBusy || !!device.adbBusy;
                 const actionButton = document.createElement('button');
                 actionButton.className = 'action-button kill-server-button';
                 actionButton.setAttribute(Attribute.UDID, device.udid);
@@ -257,6 +305,33 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                 span.innerText = value;
                 actionButton.appendChild(span);
                 td.appendChild(actionButton);
+
+                const stateSpan = document.createElement('span');
+                stateSpan.classList.add('session-state');
+                if (isBusy) {
+                    stateSpan.classList.add('busy');
+                    stateSpan.innerText = 'BUSY';
+                    if (device.busyReason === 'ws+adb') {
+                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active) and ADB automation`;
+                    } else if (device.busyReason === 'ws') {
+                        stateSpan.title = `Device is in use via ws-scrcpy (${device.scrcpyConnectionCount || 0} active)`;
+                    } else if (device.busyReason === 'adb') {
+                        stateSpan.title = 'Device is in use via ADB automation';
+                    }
+                } else if (isActive) {
+                    stateSpan.classList.add('idle');
+                    stateSpan.innerText = 'IDLE';
+                } else {
+                    const timestamp = device['last.update.timestamp'];
+                    stateSpan.classList.add('offline');
+                    if (timestamp) {
+                        const date = new Date(timestamp);
+                        stateSpan.innerText = `last session ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                    } else {
+                        stateSpan.innerText = 'offline';
+                    }
+                }
+                td.appendChild(stateSpan);
             } else if (fieldName === 'interfaces') {
                 const proxyInterfaceUrl = DeviceTracker.createUrl(this.params, device.udid).toString();
                 const proxyInterfaceName = 'proxy';
@@ -279,7 +354,8 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     };
                     const url = DeviceTracker.createUrl(params).toString();
                     const optionElement = DeviceTracker.createInterfaceOption(value.name, url);
-                    optionElement.innerText = `${value.name}: ${value.ipv4}`;
+                    const label = `${value.name}: ${value.ipv4}`;
+                    optionElement.innerText = label;
                     selectElement.appendChild(optionElement);
                     if (lastSelected) {
                         if (lastSelected === value.name || !selectedInterfaceName) {

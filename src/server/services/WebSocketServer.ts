@@ -81,38 +81,11 @@ export class WebSocketServer implements Service {
         this.mwFactories.add(mwFactory);
     }
 
-    /**
-     * Broadcast do estado dos devices para todos os clientes WS num dado servidor.
-     */
-    private broadcastDeviceStatus(wss: WSServer): void {
-        const devices = DeviceLock.listActive();
-
-        wss.clients.forEach((client: any) => {
-            if (client.readyState === 1) {
-                try {
-                    client.send(JSON.stringify({
-                        type: 'devices_in_use',
-                        devices,
-                    }));
-                } catch {
-                    // ignore send errors
-                }
-            }
-        });
-    }
-
     public attachToServer(item: ServerAndPort): WSServer {
         const { server, port } = item;
         const TAG = `WebSocket Server {tcp:${port}}`;
 
         const wss = new WSServer({ server });
-
-        // sempre que o estado muda, difunde para TODOS os servidores WS registados
-        DeviceLock.onUpdate = () => {
-            for (const wsServer of this.servers) {
-                this.broadcastDeviceStatus(wsServer);
-            }
-        };
 
         wss.on('connection', async (ws: WS, request) => {
             // === CONTROLO DE SESSÃO / LOCK POR DEVICE ===
@@ -130,18 +103,10 @@ export class WebSocketServer implements Service {
             // 1) tenta bloquear logo pela URL
             if (deviceId) {
                 if (!DeviceLock.lockDevice(deviceId, sessionId, ws)) {
-                    try {
-                        ws.send(JSON.stringify({ type: 'error', message: 'DEVICE_IN_USE' }));
-                    } catch {}
                     ws.close();
                     return;
                 }
                 locked = true;
-
-                // confirma sessão ao cliente
-                try {
-                    ws.send(JSON.stringify({ type: 'session_started', sessionId, deviceId }));
-                } catch {}
             } else {
                 // 2) lazy lock: descobrir o device na 1.ª mensagem
                 const onFirstMessage = (data: any) => {

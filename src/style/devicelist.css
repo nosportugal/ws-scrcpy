@@ -3,6 +3,9 @@
     --device-list-stripe-color: hsl(0, 0%, 96%);
     --device-list-default-color: hsl(0, 0%, 100%);
     --device-list-hover-color: hsl(218, 67%, 95%);
+    --device-card-radius: 8px;
+    --device-card-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --page-header-height: 70px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -11,20 +14,90 @@
         --device-list-stripe-color: hsl(0, 0%, 16%);
         --device-list-default-color: hsl(0, 0%, 14%);
         --device-list-hover-color: hsl(218, 17%, 18%);
+        --device-card-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
+}
+
+#page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--page-header-height);
+    padding: 0 24px;
+    background: linear-gradient(135deg, hsl(220, 14%, 96%) 0%, hsl(218, 30%, 92%) 100%);
+    border-bottom: 1px solid hsl(220, 13%, 88%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    #page-header {
+        background: linear-gradient(135deg, hsl(220, 14%, 16%) 0%, hsl(218, 20%, 20%) 100%);
+        border-bottom-color: hsl(220, 13%, 28%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+}
+
+.page-header-logo {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.page-header-logo svg {
+    height: 50px;
+    width: auto;
+}
+
+.page-header-divider {
+    width: 1px;
+    height: 32px;
+    background: hsl(220, 13%, 78%);
+    margin: 0 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .page-header-divider {
+        background: hsl(220, 13%, 38%);
+    }
+}
+
+.page-header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: currentColor;
+}
+
+.page-header-right-logo {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.page-header-right-logo svg {
+    height: 50px;
+    width: auto;
 }
 
 
 body.list {
-    height: auto;
-    width: auto;
-    overflow: auto;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
 }
 
 #devices {
     padding: 20px 0;
     width: 100%;
-    height: calc(100% - 40px);
+    height: calc(100% - var(--page-header-height) - 40px);
     overflow-y: auto;
 }
 
@@ -54,20 +127,80 @@ body.list #device_list_menu {
     color: var(--button-text-color);
 }
 
-#devices .device-list div.device:nth-child(2n+1){
-    background-color: var(--device-list-default-color);
+/* ── Grid layout ─────────────────────────────────────── */
+#devices .device-list {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    font-size: var(--font-size);
 }
 
-#devices .device-list div.device:nth-child(2n){
-    background-color: var(--device-list-stripe-color);
+/* Tracker blocks are direct children of device-list — give them the grid */
+#devices .device-list > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    padding: 4px 24px 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
+
+/* ── Card ─────────────────────────────────────────────── */
+#devices .device-list div.device {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--device-border-color);
+    border-radius: var(--device-card-radius);
+    box-shadow: var(--device-card-shadow);
+    background-color: var(--device-list-default-color);
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+    cursor: default;
+}
+
+#devices .device-list div.device:hover {
+    background-color: var(--device-list-hover-color);
+    border-color: hsl(218, 67%, 75%);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+    transform: translateY(-2px);
+}
+
+#devices .device-list div.device select {
+    color: var(--text-color);
+    background-color: var(--main-bg-color);
+    margin-left: 0;
+    border: none;
+}
+
+#devices .device-list div.device:hover select {
+    background-color: var(--device-list-hover-color);
+}
+
+/* ── Services row (desc-blocks) ───────────────────────── */
+#devices .device-list .services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
 
 #devices .device-header {
     padding: 2px 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 #devices .device-header div {
     display: inline-flex;
+}
+
+#devices .device-android-icon {
+    font-size: 1.1em;
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 #devices .device-name {
@@ -109,37 +242,14 @@ body.list #device_list_menu {
     background-color: green;
 }
 
-#devices .device-list {
-    position: relative;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-}
-
-#devices .device-list {
-    border-spacing: 0;
-    border-collapse: collapse;
-    font-family: monospace;
-    font-size: var(--font-size);
-}
-
-#devices .device-list div.device {
-    padding: 5px 20px 5px;
-}
-
-#devices .device-list div.device:hover {
-    background-color: var(--device-list-hover-color)
-}
-
-#devices .device-list div.device select {
-    color: var(--text-color);
-    background-color: var(--main-bg-color);
-    margin-left: 0;
-    border: none;
-}
-
-#devices .device-list div.device:hover select {
-    background-color: var(--device-list-hover-color);;
+#devices .device-remote-host {
+    font-size: 75%;
+    color: var(--url-color);
+    background-color: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 4px;
+    white-space: nowrap;
 }
 
 #devices .device-list div.desc-block {
@@ -151,7 +261,6 @@ body.list #device_list_menu {
     display: none;
 }
 
-#devices .device-list div.desc-block.stream,
 #devices .device-list div.desc-block.server_pid,
 #devices .device-list div.desc-block.net_interface {
     border: 1px solid var(--device-border-color);
@@ -161,7 +270,31 @@ body.list #device_list_menu {
 }
 
 #devices .device-list div.device div.desc-block.stream button.action-button {
-    color: var(--button-text-color);
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: .3em;
+    color: #fff;
+    background-color: #2980b9;
+    border: none;
+    cursor: pointer;
+}
+
+#devices .device-list div.desc-block.stream > a {
+    padding: 4px 14px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 90%;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+}
+
+#devices .device-list .device.active div.desc-block.stream > a:hover {
+    background-color: var(--device-list-hover-color);
 }
 
 #devices .device-list div.desc-block button {
@@ -170,6 +303,82 @@ body.list #device_list_menu {
 
 #devices .device-list div.desc-block button > span {
     padding: 0 .5em;
+}
+
+/* Action bar grouping shell / devtools / list-files */
+#devices .device-list div.device-action-bar {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--device-border-color);
+    border-radius: .3em;
+    overflow: hidden;
+    white-space: nowrap;
+    margin: .3em;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block {
+    margin: 0;
+    border: none;
+    border-right: 1px solid var(--device-border-color);
+    border-radius: 0;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block:last-child {
+    border-right: none;
+}
+
+#devices .device-list div.device-action-bar > div.desc-block a {
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    text-decoration: none;
+}
+
+/* Launch link badge */
+#devices .device-list div.desc-block a.link-stream {
+    display: inline-flex;
+    align-items: center;
+    font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: .3em;
+    color: #fff;
+    background-color: #2980b9;
+    text-decoration: none;
+}
+
+#devices .device-list div.desc-block a.link-stream:visited {
+    color: #fff;
+}
+
+/* State badge */
+#devices .device-list .session-state {
+    display: inline-flex;
+    align-items: center;
+    border-left: 1px solid var(--device-border-color);
+    font-size: 85%;
+    padding: 2px .7em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 0 .3em .3em 0;
+}
+
+#devices .device-list .session-state.busy {
+    color: #fff;
+    background-color: #c0392b;
+}
+
+#devices .device-list .session-state.idle {
+    color: #fff;
+    background-color: #27ae60;
+}
+
+#devices .device-list .session-state.offline {
+    color: var(--text-color-light);
+    font-weight: normal;
+    text-transform: none;
 }
 
 #devices .device-list div.desc-block button > span,
@@ -229,7 +438,11 @@ body.list #device_list_menu {
 }
 
 #devices .tracker-name {
-    padding: 5px 20px 5px;
-    font-size: larger;
+    padding: 12px 4px 4px;
     font-weight: bolder;
+    letter-spacing: 0.02em;
+    color: var(--text-color-light);
+    text-transform: uppercase;
+    font-size: 0.75em;
+    grid-column: 1 / -1;
 }

@@ -1,7 +1,7 @@
 import { TrackerChangeSet } from '@dead50f7/adbkit/lib/TrackerChangeSet';
 import { Device } from '../Device';
 import { Service } from '../../services/Service';
-import AdbKitClient from '@dead50f7/adbkit/lib/adb/client';
+import { ExtendedClient } from '../adb/ExtendedClient';
 import { AdbExtended } from '../adb';
 import GoogDeviceDescriptor from '../../../types/GoogDeviceDescriptor';
 import Tracker from '@dead50f7/adbkit/lib/adb/tracker';
@@ -11,35 +11,49 @@ import { ControlCenterCommand } from '../../../common/ControlCenterCommand';
 import * as os from 'os';
 import * as crypto from 'crypto';
 import { DeviceState } from '../../../common/DeviceState';
+import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> implements Service {
     private static readonly defaultWaitAfterError = 1000;
-    private static instance?: ControlCenter;
+    private static instances: ControlCenter[] = [];
 
     private initialized = false;
-    private client: AdbKitClient = AdbExtended.createClient();
+    private client: ExtendedClient;
     private tracker?: Tracker;
     private waitAfterError = 1000;
     private restartTimeoutId?: Timeout;
     private deviceMap: Map<string, Device> = new Map();
     private descriptors: Map<string, GoogDeviceDescriptor> = new Map();
     private readonly id: string;
+    private readonly unsubscribeLockUpdates: () => void;
 
-    protected constructor() {
+    protected constructor(private readonly adbHost: string = '127.0.0.1', private readonly adbPort: number = 5037, private readonly adbName?: string) {
         super();
-        const idString = `goog|${os.hostname()}|${os.uptime()}`;
+        const idString = `goog|${os.hostname()}|${adbHost}:${adbPort}|${os.uptime()}`;
         this.id = crypto.createHash('md5').update(idString).digest('hex');
+        this.client = AdbExtended.createClient({ host: adbHost, port: adbPort });
+        this.unsubscribeLockUpdates = DeviceLock.subscribe(this.onLockUpdate);
     }
 
     public static getInstance(): ControlCenter {
-        if (!this.instance) {
-            this.instance = new ControlCenter();
+        if (!this.instances.length) {
+            this.instances.push(new ControlCenter());
         }
-        return this.instance;
+        return this.instances[0];
+    }
+
+    public static getInstances(): ControlCenter[] {
+        return this.instances;
+    }
+
+    public static createInstance(host: string, port: number, name?: string): ControlCenter {
+        const instance = new ControlCenter(host, port, name);
+        this.instances.push(instance);
+        return instance;
     }
 
     public static hasInstance(): boolean {
-        return !!ControlCenter.instance;
+        return this.instances.length > 0;
     }
 
     private restartTracker = (): void => {
@@ -48,9 +62,13 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         }
         console.log(`Device tracker is down. Will try to restart in ${this.waitAfterError}ms`);
         this.restartTimeoutId = setTimeout(() => {
+            this.restartTimeoutId = undefined;
             this.stopTracker();
             this.waitAfterError *= 1.2;
-            this.init();
+            this.init().catch((e: Error) => {
+                console.error(`Failed to restart tracker for ${this.adbHost}:${this.adbPort}. ${e.message}`);
+                this.restartTracker();
+            });
         }, this.waitAfterError);
     };
 
@@ -78,8 +96,35 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
 
     private onDeviceUpdate = (device: Device): void => {
         const { udid, descriptor } = device;
+        this.applyBusyState(udid, descriptor);
         this.descriptors.set(udid, descriptor);
         this.emit('device', descriptor);
+    };
+
+    private applyBusyState(udid: string, descriptor: GoogDeviceDescriptor): void {
+        const wsBusy = DeviceLock.isLocked(udid) || descriptor.scrcpyConnectionCount > 0;
+        const adbBusy = descriptor.adbBusy;
+        descriptor.wsBusy = wsBusy;
+        if (wsBusy && adbBusy) {
+            descriptor.busyReason = 'ws+adb';
+        } else if (wsBusy) {
+            descriptor.busyReason = 'ws';
+        } else if (adbBusy) {
+            descriptor.busyReason = 'adb';
+        } else {
+            descriptor.busyReason = 'none';
+        }
+    }
+
+    private onLockUpdate = (): void => {
+        this.descriptors.forEach((descriptor, udid) => {
+            const prevReason = descriptor.busyReason;
+            const prevWsBusy = descriptor.wsBusy;
+            this.applyBusyState(udid, descriptor);
+            if (prevReason !== descriptor.busyReason || prevWsBusy !== descriptor.wsBusy) {
+                this.emit('device', descriptor);
+            }
+        });
     };
 
     private handleConnected(udid: string, state: string): void {
@@ -87,7 +132,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         if (device) {
             device.setState(state);
         } else {
-            device = new Device(udid, state);
+            device = new Device(udid, state, this.adbHost, this.adbPort);
             device.on('update', this.onDeviceUpdate);
             this.deviceMap.set(udid, device);
         }
@@ -99,9 +144,13 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         }
         this.tracker = await this.startTracker();
         const list = await this.client.listDevices();
-        list.forEach((device) => {
+        // Stagger initial per-device info fetches (each spawns several concurrent `adb shell`
+        // calls); firing them all at once for many devices on the same remote adb server can
+        // overwhelm it and cause every one of them to time out.
+        const STAGGER_MS = 150;
+        list.forEach((device, index) => {
             const { id, type } = device;
-            this.handleConnected(id, type);
+            setTimeout(() => this.handleConnected(id, type), index * STAGGER_MS);
         });
         this.initialized = true;
     }
@@ -129,6 +178,45 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         this.initialized = false;
     }
 
+    public static findInstanceForUdid(udid: string): ControlCenter | undefined {
+        for (const instance of ControlCenter.instances) {
+            if (instance.getDevice(udid)) {
+                return instance;
+            }
+        }
+        return undefined;
+    }
+
+    public getClient(): ExtendedClient {
+        return this.client;
+    }
+
+    public get host(): string {
+        return this.adbHost;
+    }
+
+    public get port(): number {
+        return this.adbPort;
+    }
+
+    public static getAllDevices(): GoogDeviceDescriptor[] {
+        const all: GoogDeviceDescriptor[] = [];
+        for (const instance of ControlCenter.instances) {
+            all.push(...instance.getDevices());
+        }
+        return all;
+    }
+
+    public static findDeviceAcrossInstances(udid: string): Device | undefined {
+        for (const instance of ControlCenter.instances) {
+            const device = instance.getDevice(udid);
+            if (device) {
+                return device;
+            }
+        }
+        return undefined;
+    }
+
     public getDevices(): GoogDeviceDescriptor[] {
         return Array.from(this.descriptors.values());
     }
@@ -142,17 +230,28 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
     }
 
     public getName(): string {
-        return `aDevice Tracker [${os.hostname()}]`;
+        if (this.adbName) {
+            return `Android Devices [${this.adbName}]`;
+        }
+        return `Android Devices [${os.hostname()}]`;
     }
 
     public start(): Promise<void> {
-        return this.init().catch((e) => {
-            console.error(`Error: Failed to init "${this.getName()}". ${e.message}`);
-        });
+        // Start all instances when the first one is started via ServiceClass
+        const startPromises = ControlCenter.instances.map((instance) =>
+            instance.init().catch((e) => {
+                console.error(`Error: Failed to init "${instance.getName()}". ${e.message}`);
+            }),
+        );
+        return Promise.all(startPromises).then(() => undefined);
     }
 
     public release(): void {
-        this.stopTracker();
+        // Release all instances
+        for (const instance of ControlCenter.instances) {
+            instance.unsubscribeLockUpdates();
+            instance.stopTracker();
+        }
     }
 
     public async runCommand(command: ControlCenterCommand): Promise<void> {

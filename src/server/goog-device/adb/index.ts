@@ -9,11 +9,18 @@ interface Options {
 }
 
 export class AdbExtended extends Adb {
+    private static defaultOptions: Options = {};
+
+    static setDefaultOptions(options: Options): void {
+        AdbExtended.defaultOptions = options;
+    }
+
     static createClient(options: Options = {}): ExtendedClient {
+        const mergedOptions = { ...AdbExtended.defaultOptions, ...options };
         const opts: ClientOptions = {
-            bin: options.bin,
-            host: options.host || process.env.ADB_HOST || '127.0.0.1',
-            port: options.port || 0,
+            bin: mergedOptions.bin,
+            host: mergedOptions.host || process.env.ADB_HOST || '127.0.0.1',
+            port: mergedOptions.port || 0,
         };
         if (!opts.port) {
             const port = parseInt(process.env.ADB_PORT || '', 10);
