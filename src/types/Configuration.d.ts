@@ -56,6 +56,7 @@ export interface ApplRemoteDeviceItem {
     // Local port already tunneled to the device's WDA MJPEG broadcaster (e.g. via a second
     // iproxy + SSH port-forward). Required for MJPEG streaming in remote mode.
     mjpegLocalPort?: number;
+    wdaLocalPort?: number;
     // Appium/XCUITest signing configuration. The certificate and provisioning profile stay on
     // the Mac running Appium; ws-scrcpy only sends these identifiers to Appium.
     updatedWDABundleId?: string;

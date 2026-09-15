@@ -29,6 +29,7 @@ applDeviceList:
     webDriverAgentUrl: 'http://127.0.0.1:4723'
     # local port already tunneled to the device's WDA MJPEG broadcaster (see README), optional
     mjpegLocalPort: 9200
+    wdaLocalPort: 8100
     # signing identifiers used by the Appium host to build WebDriverAgent
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
@@ -37,6 +38,7 @@ applDeviceList:
     name: 'iPhone 2 (lab)'
     webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9201
+    wdaLocalPort: 8101
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
@@ -44,6 +46,7 @@ applDeviceList:
     name: 'iPhone 3 (lab)'
     webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9202
+    wdaLocalPort: 8102
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
@@ -51,6 +54,7 @@ applDeviceList:
     name: 'iPad (lab)'
     webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9203
+    wdaLocalPort: 8103
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'
@@ -58,6 +62,7 @@ applDeviceList:
     name: 'iPhone de Joao (lab)'
     webDriverAgentUrl: 'http://127.0.0.1:4723'
     mjpegLocalPort: 9204
+    wdaLocalPort: 8104
     updatedWDABundleId: 'com.integrationteam.WebDriverAgentRunner'
     xcodeOrgId: '8S3DQVA5N6'
     xcodeSigningId: 'Apple Development'

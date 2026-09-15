@@ -47,14 +47,17 @@ export class WdaHttpClient {
         });
     }
 
-    public async createSession(udid: string, signingCapabilities: Record<string, string | undefined> = {}): Promise<void> {
-        const signingCaps: Record<string, string> = Object.keys(signingCapabilities).reduce((acc, key) => {
+    public async createSession(
+        udid: string,
+        signingCapabilities: Record<string, string | number | undefined> = {},
+    ): Promise<void> {
+        const signingCaps: Record<string, string | number> = Object.keys(signingCapabilities).reduce((acc, key) => {
             const value = signingCapabilities[key];
             if (value !== undefined) {
                 acc[key] = value;
             }
             return acc;
-        }, {} as Record<string, string>);
+        }, {} as Record<string, string | number>);
 
         const response = await this.request<{ value: { sessionId: string } }>('POST', '/session', {
             capabilities: {

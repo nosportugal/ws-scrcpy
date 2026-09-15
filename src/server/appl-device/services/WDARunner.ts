@@ -226,6 +226,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             'appium:updatedWDABundleId': controlCenter.getUpdatedWDABundleId(this.udid),
             'appium:xcodeOrgId': controlCenter.getXcodeOrgId(this.udid),
             'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
+            'appium:wdaLocalPort': controlCenter.getWdaLocalPort(this.udid),
         });
         this.remoteClient = client;
         // MJPEG bytes still need a network path from this host to the device; since there's no

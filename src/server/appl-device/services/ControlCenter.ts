@@ -17,6 +17,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private descriptors: Map<string, ApplDeviceDescriptor> = new Map();
     private readonly wdaUrls: Map<string, string> = new Map();
     private readonly mjpegLocalPorts: Map<string, number> = new Map();
+    private readonly wdaLocalPorts: Map<string, number> = new Map();
     private readonly updatedWDABundleIds: Map<string, string> = new Map();
     private readonly xcodeOrgIds: Map<string, string> = new Map();
     private readonly xcodeSigningIds: Map<string, string> = new Map();
@@ -87,10 +88,13 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private loadStaticDeviceList(): void {
         Config.getInstance()
             .getApplDeviceList()
-            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
+            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort, wdaLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
                 this.wdaUrls.set(udid, webDriverAgentUrl);
                 if (mjpegLocalPort) {
                     this.mjpegLocalPorts.set(udid, mjpegLocalPort);
+                }
+                if (wdaLocalPort) {
+                    this.wdaLocalPorts.set(udid, wdaLocalPort);
                 }
                 if (updatedWDABundleId) {
                     this.updatedWDABundleIds.set(udid, updatedWDABundleId);
@@ -118,6 +122,10 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
 
     public getMjpegLocalPort(udid: string): number | undefined {
         return this.mjpegLocalPorts.get(udid);
+    }
+
+    public getWdaLocalPort(udid: string): number | undefined {
+        return this.wdaLocalPorts.get(udid);
     }
 
     public getUpdatedWDABundleId(udid: string): string | undefined {
