@@ -248,7 +248,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             if (await client.isSessionAlive()) {
                 this.remoteClient = client;
                 await this.updateRemoteMetadata(controlCenter, client);
-                this.configureRemoteMjpeg(controlCenter);
+                this.configureRemoteMjpeg();
                 return;
             }
             await client.deleteSession();
@@ -261,7 +261,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         });
         this.remoteClient = client;
         await this.updateRemoteMetadata(controlCenter, client);
-        this.configureRemoteMjpeg(controlCenter);
+        this.configureRemoteMjpeg();
     }
 
     private async updateRemoteMetadata(controlCenter: ControlCenter, client: WdaHttpClient): Promise<void> {
@@ -272,7 +272,7 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         }
     }
 
-    private configureRemoteMjpeg(controlCenter: ControlCenter): void {
+    private configureRemoteMjpeg(): void {
         // MJPEG bytes still need a network path from this host to the device; since there's no
         // local xcodebuild/usbmuxd session to forward them, rely on a manually-tunneled local port
         // (e.g. a second iproxy + SSH port-forward) configured per-device via `mjpegLocalPort`.
