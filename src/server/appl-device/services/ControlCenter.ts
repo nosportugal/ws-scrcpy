@@ -102,7 +102,7 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
     private loadStaticDeviceList(): void {
         Config.getInstance()
             .getApplDeviceList()
-            .forEach(({ udid, name, webDriverAgentUrl, mjpegLocalPort, wdaLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
+            .forEach(({ udid, name, model, version, webDriverAgentUrl, mjpegLocalPort, wdaLocalPort, updatedWDABundleId, xcodeOrgId, xcodeSigningId }) => {
                 this.wdaUrls.set(udid, webDriverAgentUrl);
                 if (mjpegLocalPort) {
                     this.mjpegLocalPorts.set(udid, mjpegLocalPort);
@@ -122,8 +122,8 @@ export class ControlCenter extends BaseControlCenter<ApplDeviceDescriptor> imple
                 this.descriptors.set(udid, {
                     udid,
                     name: name || udid,
-                    model: '<remote>',
-                    version: '',
+                    model: model || 'iPhone',
+                    version: version || '',
                     state: DeviceState.CONNECTED,
                     wsBusy: DeviceLock.isLocked(udid),
                     'last.update.timestamp': Date.now(),
