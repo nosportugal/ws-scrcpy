@@ -4,8 +4,6 @@ import { StreamClient } from './StreamClient';
 import { BasePlayer, PlayerClass } from '../../player/BasePlayer';
 import { WdaStatus } from '../../../common/WdaStatus';
 import { ApplMjpegMoreBox } from '../toolbox/ApplMjpegMoreBox';
-import ApplDeviceDescriptor from '../../../types/ApplDeviceDescriptor';
-import { ParamsDeviceTracker } from '../../../types/ParamsDeviceTracker';
 
 const TAG = '[StreamClientMJPEG]';
 
@@ -36,20 +34,6 @@ export class StreamClientMJPEG extends StreamClient<ParamsStream> {
 
     public static get action(): string {
         return StreamClientMJPEG.ACTION;
-    }
-
-    public static createEntryForDeviceList(
-        descriptor: ApplDeviceDescriptor,
-        blockClass: string,
-        params: ParamsDeviceTracker,
-    ): Array<HTMLElement | DocumentFragment | undefined> {
-        const entries = super.createEntryForDeviceList(descriptor, blockClass, params);
-        entries.forEach((entry) => {
-            if (entry instanceof HTMLAnchorElement) {
-                entry.innerText = 'Launch';
-            }
-        });
-        return entries;
     }
 
     public createPlayer(udid: string, playerName?: string): BasePlayer {
