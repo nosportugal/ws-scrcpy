@@ -152,6 +152,14 @@ export class WdaHttpClient {
         return response.value?.width || 0;
     }
 
+    public async getWindowSize(): Promise<{ width: number; height: number }> {
+        const response = await this.request<{ value?: { width?: number; height?: number } }>(
+            'GET',
+            `/session/${this.requireSession()}/window/rect`,
+        );
+        return { width: response.value?.width || 0, height: response.value?.height || 0 };
+    }
+
     public deleteSession(): Promise<any> {
         if (!this.sessionId) {
             return Promise.resolve();

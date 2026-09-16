@@ -223,30 +223,72 @@ export class WdaProxyClient
         });
     }
 
-    // WDA has no per-keycode input like Android; it only types text into whichever field is
-    // currently focused on screen, so the host keyboard must be translated into text/backspace.
-    private onKeyDown = (event: KeyboardEvent): void => {
+    // Raw `keydown` isn't reliable across browsers (Safari doesn't fire it consistently for a
+    // non-form element, and it can't see composed/accented characters from dead-key sequences).
+    // Instead keep a hidden textarea focused and read the text the browser itself composed via
+    // `input`, using a sentinel character so backspace on an "empty" field still fires an event.
+    private static readonly KEYBOARD_ANCHOR = '\u200b';
+    private keyboardInput?: HTMLTextAreaElement;
+    private keyboardCaptureEnabled = false;
+
+    private resetKeyboardInput(textarea: HTMLTextAreaElement): void {
+        textarea.value = WdaProxyClient.KEYBOARD_ANCHOR;
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+
+    private onKeyboardInput = (event: Event): void => {
+        const textarea = event.currentTarget as HTMLTextAreaElement;
+        const anchorLength = WdaProxyClient.KEYBOARD_ANCHOR.length;
+        const value = textarea.value;
         let text: string | undefined;
-        if (event.key.length === 1) {
-            text = event.key;
-        } else if (event.key === 'Enter') {
-            text = '\n';
-        } else if (event.key === 'Backspace') {
+        if (value.length > anchorLength) {
+            text = value.slice(anchorLength);
+        } else if (value.length < anchorLength) {
             text = '\u0008';
-        } else {
-            return;
         }
-        event.preventDefault();
-        this.sendKeys(text).catch((error: Error) => {
-            console.error(TAG, `Failed to send keys: ${error.message}`);
-        });
+        this.resetKeyboardInput(textarea);
+        if (text) {
+            this.sendKeys(text).catch((error: Error) => {
+                console.error(TAG, `Failed to send keys: ${error.message}`);
+            });
+        }
     };
 
+    private onKeyboardBlur = (event: FocusEvent): void => {
+        if (this.keyboardCaptureEnabled) {
+            (event.target as HTMLTextAreaElement).focus();
+        }
+    };
+
+    private ensureKeyboardInput(): HTMLTextAreaElement {
+        if (!this.keyboardInput) {
+            const textarea = document.createElement('textarea');
+            textarea.setAttribute('autocomplete', 'off');
+            textarea.setAttribute('autocorrect', 'off');
+            textarea.setAttribute('autocapitalize', 'off');
+            textarea.setAttribute('spellcheck', 'false');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            textarea.style.width = '1px';
+            textarea.style.height = '1px';
+            textarea.addEventListener('input', this.onKeyboardInput);
+            textarea.addEventListener('blur', this.onKeyboardBlur);
+            document.body.appendChild(textarea);
+            this.keyboardInput = textarea;
+        }
+        return this.keyboardInput;
+    }
+
     public setHandleKeyboardEvents(enabled: boolean): void {
+        this.keyboardCaptureEnabled = enabled;
         if (enabled) {
-            document.body.addEventListener('keydown', this.onKeyDown);
+            const textarea = this.ensureKeyboardInput();
+            this.resetKeyboardInput(textarea);
+            textarea.focus();
         } else {
-            document.body.removeEventListener('keydown', this.onKeyDown);
+            this.keyboardInput?.blur();
         }
     }
 
@@ -343,6 +385,7 @@ export class WdaProxyClient
             return;
         }
         this.stopped = true;
+        this.keyboardInput?.remove();
         if (this.ws && this.ws.readyState === this.ws.OPEN) {
             this.ws.close();
         }
