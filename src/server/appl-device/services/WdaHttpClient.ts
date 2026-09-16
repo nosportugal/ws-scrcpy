@@ -137,7 +137,9 @@ export class WdaHttpClient {
     }
 
     public sendKeys(value: string): Promise<any> {
-        return this.executeMobile('type', { text: value });
+        // `mobile: type` isn't a real XCUITest execute-method (NotImplementedError); the classic
+        // `/keys` endpoint (proxied by Appium to WDA's `/wda/keys`) works on iPhone and iPad.
+        return this.request('POST', `/session/${this.requireSession()}/keys`, { value: [...value] });
     }
 
     public updateSettings(settings: Record<string, unknown>): Promise<any> {
