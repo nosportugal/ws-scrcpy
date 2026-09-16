@@ -159,30 +159,55 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
         }
     }
 
-    private async requestRemote(client: WdaHttpClient, command: ControlCenterCommand): Promise<any> {
+    private async requestRemote(
+        client: WdaHttpClient,
+        command: ControlCenterCommand,
+        allowRecovery = true,
+    ): Promise<any> {
         const method = command.getMethod();
         const args = command.getArgs();
-        switch (method) {
-            case WDAMethod.GET_SCREEN_WIDTH:
-                return client.getScreenWidth();
-            case WDAMethod.CLICK:
-                return client.tap(args.x, args.y);
-            case WDAMethod.PRESS_BUTTON:
-                return client.pressButton(args.name);
-            case WDAMethod.SCROLL: {
-                const { from, to } = args;
-                return client.dragFromToForDuration(from.x, from.y, to.x, to.y);
+        try {
+            switch (method) {
+                case WDAMethod.GET_SCREEN_WIDTH:
+                    return client.getScreenWidth();
+                case WDAMethod.CLICK:
+                    return client.tap(args.x, args.y);
+                case WDAMethod.PRESS_BUTTON:
+                    return client.pressButton(args.name);
+                case WDAMethod.SCROLL: {
+                    const { from, to } = args;
+                    return client.dragFromToForDuration(from.x, from.y, to.x, to.y);
+                }
+                case WDAMethod.APPIUM_SETTINGS:
+                    return client.updateSettings(args.options);
+                case WDAMethod.SEND_KEYS:
+                    return client.sendKeys(args.keys);
+                case WDAMethod.EDGE_SWIPE_BACK:
+                    // Common iOS "back" gesture: swipe in from the left edge of the screen.
+                    return client.dragFromToForDuration(2, 300, 150, 300, 0.3);
+                default:
+                    return `Unknown command: ${method}`;
             }
-            case WDAMethod.APPIUM_SETTINGS:
-                return client.updateSettings(args.options);
-            case WDAMethod.SEND_KEYS:
-                return client.sendKeys(args.keys);
-            case WDAMethod.EDGE_SWIPE_BACK:
-                // Common iOS "back" gesture: swipe in from the left edge of the screen.
-                return client.dragFromToForDuration(2, 300, 150, 300, 0.3);
-            default:
-                return `Unknown command: ${method}`;
+        } catch (error: any) {
+            if (!allowRecovery || !this.isRemoteWdaFailure(error)) {
+                throw error;
+            }
+            console.warn(this.name, `Remote WDA failed; recreating session: ${error.message}`);
+            if (this.remoteClient === client) {
+                this.remoteClient = undefined;
+                this.started = false;
+            }
+            await client.deleteSession();
+            await this.start();
+            if (!this.remoteClient) {
+                throw error;
+            }
+            return this.requestRemote(this.remoteClient, command, false);
         }
+    }
+
+    private isRemoteWdaFailure(error: Error): boolean {
+        return /ECONNREFUSED|socket hang up|invalid session id|Could not proxy command/i.test(error.message);
     }
 
     public async start(): Promise<void> {
