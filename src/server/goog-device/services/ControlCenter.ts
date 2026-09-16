@@ -15,6 +15,7 @@ import DeviceLock from '../../device-lock';
 
 export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> implements Service {
     private static readonly defaultWaitAfterError = 1000;
+    private static readonly maxWaitAfterError = 15000;
     private static instances: ControlCenter[] = [];
 
     private initialized = false;
@@ -64,7 +65,7 @@ export class ControlCenter extends BaseControlCenter<GoogDeviceDescriptor> imple
         this.restartTimeoutId = setTimeout(() => {
             this.restartTimeoutId = undefined;
             this.stopTracker();
-            this.waitAfterError *= 1.2;
+            this.waitAfterError = Math.min(this.waitAfterError * 1.2, ControlCenter.maxWaitAfterError);
             this.init().catch((e: Error) => {
                 console.error(`Failed to restart tracker for ${this.adbHost}:${this.adbPort}. ${e.message}`);
                 this.restartTracker();
