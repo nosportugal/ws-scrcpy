@@ -22,6 +22,17 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
     public static SHUTDOWN_TIMEOUT = 15000;
     private static servers: Map<string, Server> = new Map();
     private static cachedScreenWidth: Map<string, any> = new Map();
+    // Serializes remote `xcodebuild` invocations across all devices: multiple concurrent
+    // builds share the same host's DerivedData and can fail/slow each other down.
+    private static buildQueue: Promise<void> = Promise.resolve();
+    private static enqueueBuild<T>(task: () => Promise<T>): Promise<T> {
+        const result = WdaRunner.buildQueue.then(task, task);
+        WdaRunner.buildQueue = result.then(
+            () => undefined,
+            () => undefined,
+        );
+        return result;
+    }
     public static getInstance(udid: string): WdaRunner {
         let instance = this.instances.get(udid);
         if (!instance) {
@@ -278,12 +289,15 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
             }
             await client.deleteSession();
         }
-        await client.createSession(this.udid, {
-            'appium:updatedWDABundleId': controlCenter.getUpdatedWDABundleId(this.udid),
-            'appium:xcodeOrgId': controlCenter.getXcodeOrgId(this.udid),
-            'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
-            'appium:wdaLocalPort': controlCenter.getWdaLocalPort(this.udid),
-        });
+        // Only the build/install step is queued; once a session exists, devices run independently.
+        await WdaRunner.enqueueBuild(() =>
+            client.createSession(this.udid, {
+                'appium:updatedWDABundleId': controlCenter.getUpdatedWDABundleId(this.udid),
+                'appium:xcodeOrgId': controlCenter.getXcodeOrgId(this.udid),
+                'appium:xcodeSigningId': controlCenter.getXcodeSigningId(this.udid),
+                'appium:wdaLocalPort': controlCenter.getWdaLocalPort(this.udid),
+            }),
+        );
         this.remoteClient = client;
         await this.updateRemoteMetadata(controlCenter, client);
         this.configureRemoteMjpeg();
