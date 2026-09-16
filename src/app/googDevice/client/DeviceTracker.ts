@@ -273,26 +273,6 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             if (fieldName === 'pid') {
                 hasPid = value !== '-1';
                 const isBusy = !!device.wsBusy || !!device.adbBusy;
-                // Informational only: no kill/start-server control, so nobody can disrupt the ADB
-                // server for a device by accident from the device list.
-                const infoBadge = document.createElement('span');
-                infoBadge.className = 'action-button';
-                if (isActive) {
-                    infoBadge.classList.add('active');
-                } else {
-                    const timestamp = device['last.update.timestamp'];
-                    if (timestamp) {
-                        const date = new Date(timestamp);
-                        infoBadge.title = `Last update on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
-                    } else {
-                        infoBadge.title = `Not active`;
-                    }
-                    infoBadge.appendChild(SvgImage.create(SvgImage.Icon.OFFLINE));
-                }
-                const span = document.createElement('span');
-                span.innerText = value;
-                infoBadge.appendChild(span);
-                td.appendChild(infoBadge);
 
                 const stateSpan = document.createElement('span');
                 stateSpan.classList.add('session-state');
