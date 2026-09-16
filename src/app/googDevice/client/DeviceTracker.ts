@@ -273,38 +273,26 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
             if (fieldName === 'pid') {
                 hasPid = value !== '-1';
                 const isBusy = !!device.wsBusy || !!device.adbBusy;
-                const actionButton = document.createElement('button');
-                actionButton.className = 'action-button kill-server-button';
-                actionButton.setAttribute(Attribute.UDID, device.udid);
-                actionButton.setAttribute(Attribute.PID, value);
-                let command: string;
+                // Informational only: no kill/start-server control, so nobody can disrupt the ADB
+                // server for a device by accident from the device list.
+                const infoBadge = document.createElement('span');
+                infoBadge.className = 'action-button';
                 if (isActive) {
-                    actionButton.classList.add('active');
-                    actionButton.onclick = this.onActionButtonClick;
-                    if (hasPid) {
-                        command = ControlCenterCommand.KILL_SERVER;
-                        actionButton.title = 'Kill server';
-                        actionButton.appendChild(SvgImage.create(SvgImage.Icon.CANCEL));
-                    } else {
-                        command = ControlCenterCommand.START_SERVER;
-                        actionButton.title = 'Start server';
-                        actionButton.appendChild(SvgImage.create(SvgImage.Icon.REFRESH));
-                    }
-                    actionButton.setAttribute(Attribute.COMMAND, command);
+                    infoBadge.classList.add('active');
                 } else {
                     const timestamp = device['last.update.timestamp'];
                     if (timestamp) {
                         const date = new Date(timestamp);
-                        actionButton.title = `Last update on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
+                        infoBadge.title = `Last update on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
                     } else {
-                        actionButton.title = `Not active`;
+                        infoBadge.title = `Not active`;
                     }
-                    actionButton.appendChild(SvgImage.create(SvgImage.Icon.OFFLINE));
+                    infoBadge.appendChild(SvgImage.create(SvgImage.Icon.OFFLINE));
                 }
                 const span = document.createElement('span');
                 span.innerText = value;
-                actionButton.appendChild(span);
-                td.appendChild(actionButton);
+                infoBadge.appendChild(span);
+                td.appendChild(infoBadge);
 
                 const stateSpan = document.createElement('span');
                 stateSpan.classList.add('session-state');
