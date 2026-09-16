@@ -223,6 +223,33 @@ export class WdaProxyClient
         });
     }
 
+    // WDA has no per-keycode input like Android; it only types text into whichever field is
+    // currently focused on screen, so the host keyboard must be translated into text/backspace.
+    private onKeyDown = (event: KeyboardEvent): void => {
+        let text: string | undefined;
+        if (event.key.length === 1) {
+            text = event.key;
+        } else if (event.key === 'Enter') {
+            text = '\n';
+        } else if (event.key === 'Backspace') {
+            text = '\u0008';
+        } else {
+            return;
+        }
+        event.preventDefault();
+        this.sendKeys(text).catch((error: Error) => {
+            console.error(TAG, `Failed to send keys: ${error.message}`);
+        });
+    };
+
+    public setHandleKeyboardEvents(enabled: boolean): void {
+        if (enabled) {
+            document.body.addEventListener('keydown', this.onKeyDown);
+        } else {
+            document.body.removeEventListener('keydown', this.onKeyDown);
+        }
+    }
+
     public async pressButton(name: string): Promise<void> {
         return this.requestWebDriverAgent(WDAMethod.PRESS_BUTTON, {
             name,

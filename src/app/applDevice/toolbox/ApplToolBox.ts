@@ -66,6 +66,17 @@ export class ApplToolBox extends ToolBox {
             elements.push(screenshot);
         }
 
+        const keyboard = new ToolBoxCheckbox(
+            'Capture keyboard',
+            SvgImage.Icon.KEYBOARD,
+            `capture_keyboard_${udid}_${playerName}`,
+        );
+        keyboard.addEventListener('click', (_, el) => {
+            const element = el.getElement();
+            wdaConnection.setHandleKeyboardEvents(element.checked);
+        });
+        elements.push(keyboard);
+
         if (moreBox) {
             const more = new ToolBoxCheckbox('More', SvgImage.Icon.MORE, `show_more_${udid}_${playerName}`);
             more.addEventListener('click', (_, el) => {
