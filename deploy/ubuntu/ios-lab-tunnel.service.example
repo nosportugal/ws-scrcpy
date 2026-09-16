@@ -9,6 +9,8 @@ User=ubuntu
 Environment=MAC_MINI_SSH_USER=integrationnet
 Environment=MAC_MINI_HOST=192.168.200.37
 ExecStart=/usr/bin/ssh -N \
+  -i /home/ubuntu/.ssh/id_ed25519 \
+  -o BatchMode=yes \
   -o ServerAliveInterval=30 \
   -o ServerAliveCountMax=3 \
   -o ExitOnForwardFailure=yes \
@@ -19,7 +21,7 @@ ExecStart=/usr/bin/ssh -N \
   -L 9202:127.0.0.1:9202 \
   -L 9203:127.0.0.1:9203 \
   -L 9204:127.0.0.1:9204 \
-  ${MAC_MINI_SSH_USER}@${MAC_MINI_HOST}
+  integrationnet@192.168.200.37
 Restart=always
 RestartSec=5
 
