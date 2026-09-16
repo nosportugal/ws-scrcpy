@@ -312,6 +312,9 @@ export class DeviceTracker extends BaseDeviceTracker<GoogDeviceDescriptor, never
                     'name',
                     encodeURIComponent(`${DeviceTracker.AttributePrefixInterfaceSelectFor}${fullName}`),
                 );
+                // Hidden for now: nobody switches away from the "proxy over adb" connection in
+                // practice; kept in the DOM (not removed) so it can be shown again if ever needed.
+                td.classList.add('hidden');
                 /// #if SCRCPY_LISTENS_ON_ALL_INTERFACES
                 device.interfaces.forEach((value) => {
                     const params = {

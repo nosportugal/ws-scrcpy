@@ -194,12 +194,13 @@ export class WdaRunner extends TypedEmitter<WdaRunnerEvents> {
                 case WDAMethod.SEND_KEYS:
                     return client.sendKeys(args.keys);
                 case WDAMethod.EDGE_SWIPE_BACK: {
-                    // Common iOS "back" gesture: swipe in from the left edge of the screen.
-                    // Use the middle of the actual screen height, not a fixed pixel value, so it
-                    // still lands within the screen on devices/orientations with a different size.
-                    const { height } = await client.getWindowSize();
+                    // Common iOS "back" gesture: swipe in from the left edge of the screen. The
+                    // interactive pop transition only completes once the drag crosses roughly
+                    // half the screen WIDTH, so the horizontal distance must scale with it too.
+                    const { width, height } = await client.getWindowSize();
                     const y = height > 0 ? Math.round(height / 2) : 300;
-                    return client.dragFromToForDuration(2, y, 150, y, 0.3);
+                    const endX = width > 0 ? Math.round(width * 0.75) : 300;
+                    return client.dragFromToForDuration(2, y, endX, y, 0.3);
                 }
                 default:
                     return `Unknown command: ${method}`;
